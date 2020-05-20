@@ -10,6 +10,7 @@ openpyxl = "*"
 numpy = "*"
 matplotlib = "*"
 pyqt5 = "*"
+pyserial = "*"
 
 [requires]
 python_version = "3.8"
