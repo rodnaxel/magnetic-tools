@@ -1,6 +1,7 @@
 from magnetic.algorithm import Algorithm
 from magnetic.util import from_excel, plot
 
+
 if __name__ == '__main__':
 	dataset = from_excel(
 		path='./downloads/example_dataset.xlsx',

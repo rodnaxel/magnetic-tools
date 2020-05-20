@@ -22,21 +22,25 @@ def to_excel(path=None):
     wb.save('./downloads/sample.xlsx')
 
 
-def plot(dataset_base, dataset_finish, frame='decart'):
+def plot(dataset_base, dataset_finish=None, *, frame='decart'):
     """ This function used to draw  """
-    x = [x for (x, _) in dataset_base]
-    y = [y for (_, y) in dataset_base]
-
-    xc = [x for (x, _) in dataset_finish]
-    yc = [y for (_, y) in dataset_finish]
 
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots()
     fig.set_size_inches(8.5, 8.5)
-    ax.plot(x, y, marker='.')
-    ax.plot(xc, yc, marker='.', color='red')
+
     ax.set(xlabel='B, uT', ylabel='C, uT',
            title='Magnetic ellips')
+
+    x = [x for (x, _) in dataset_base]
+    y = [y for (_, y) in dataset_base]
+    ax.scatter(x, y, marker='.')
+
+    if dataset_finish:
+        xc = [x for (x, _) in dataset_finish]
+        yc = [y for (_, y) in dataset_finish]
+        ax.plot(xc, yc, marker='.', color='red')
+
     ax.grid()
     # fig.savefig("test.png")
     plt.show()

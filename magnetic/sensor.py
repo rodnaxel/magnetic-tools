@@ -1,7 +1,9 @@
-from typing import Union
+from collections import deque
+import threading
+import time
 
 import serial
-from serial import Serial
+from magnetic.util import plot
 
 
 def kang2dec(kang, signed=True):
@@ -13,11 +15,6 @@ def gauss2tesla(gauss):
 
 
 def fetch_dorient(message):
-    if not message:
-        return None
-    else:
-        message = message[3:-1]
-
     fields = [message[2 * i: 2 * (i + 1)] for i in range(9)]
 
     roll = kang2dec(fields[0])
@@ -31,41 +28,114 @@ def fetch_dorient(message):
 
 
 class Sensor:
+    SOP1 = bytes.fromhex("0d")
+    SOP2 = bytes.fromhex("0a")
+    SOP3 = bytes.fromhex("7e")
+
     def __init__(self, bus):
         self.bus = bus
+        self.messages = deque(maxlen=1)
 
-    def read(self):
-        buf = b''
-        while self.bus.in_waiting:
+    def revert(self):
+        self.bus.write(bytes.fromhex("0d0a7e7201040c"))
+
+    def data(self):
+        print("data")
+        return self.messages
+
+    def readany(self):
+        """ This function used to read any message from sensor"""
+        print('Start readany')
+        message = b''
+        start = 0
+        pid = 0
+        size = 0
+        #finish = False
+
+        while True:
             buf = self.bus.read(1)
-            if buf != b'~':
+            if start == 0:
+                if buf == self.SOP1:
+                    start += 1
+                else:
+                    start = 0
+            elif start == 1:
+                if buf == self.SOP2:
+                    start += 1
+                else:
+                    start = 0
+            elif start == 2:
+                if buf == self.SOP3:
+                    start += 1
+                else:
+                    start = 0
+            elif start == 3:
+                pid = int.from_bytes(buf, byteorder='little')
+                start = 4
+            elif start == 4:
+                size = int.from_bytes(buf, byteorder='little')
+                start = 5
+            elif start == 5:
+                if len(message) < size:
+                    message += buf
+                else:
+                    if pid == 112:
+                        self.messages.append(fetch_dorient(message))
+                        #finish = True
+                    start = 0
+                    message = b''
+            else:
+                print("Error: sensor.readany(): ")
+
+
+class Calibration:
+    def __init__(self, bus):
+        self.sensor = Sensor(bus)
+        self.dataset = []
+        self.finish = False
+
+    def start(self):
+        self.data_collection()
+
+    def stop(self):
+        self.finish = True
+
+    def data_collection(self):
+        self.sensor.revert()
+
+        # TODO: <1> Make algoritm finish data collection
+        # TODO: <2> Run sensor.readany() in separate thread and then get data by Timer
+        thread = threading.Thread(target=self.sensor.readany, daemon=True)
+        thread.start()
+
+        while not self.finish:
+            data = self.sensor.data()
+            if not data:
                 continue
-            buf += self.bus.read(21)
-        return fetch_dorient(buf)
+            else:
+                data = data[-1]
+
+            roll, pitch, heading, *fields, z = data
+            print(f"{heading=}")
+            self.dataset.append(fields)
+
+    def compute(self):
+        """TODO: This function used to compute deviation coefficients"""
 
 
 def debug():
-    import threading
-    import time
+    serobj = serial.Serial("/dev/ttyUSB0", timeout=0.1)
+    cal = Calibration(serobj)
 
-    serobj = serial.Serial(port="/dev/ttyUSB0")
-    sensor = Sensor(bus=serobj)
-
-    counter_empty_message = 0
     try:
-        while True:
-            message = sensor.read()
-            time.sleep(0.1)
-            if message:
-                print(message)
-            else:
-                counter_empty_message += 1
-                print("warning: empty message: {}".format(counter_empty_message))
+        cal.data_collection()
     except KeyboardInterrupt as e:
-        print(type(e).__name__, ": finish")
+        cal.stop()
         serobj.close()
+
+
+    # plot(cal.dataset)
 
 
 if __name__ == "__main__":
     debug()
-
