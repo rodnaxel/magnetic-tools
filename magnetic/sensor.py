@@ -50,7 +50,6 @@ class Sensor:
         start = 0
         pid = 0
         size = 0
-        #finish = False
 
         while True:
             buf = self.bus.read(1)
