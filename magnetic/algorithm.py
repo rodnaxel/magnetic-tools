@@ -1,15 +1,19 @@
 import math
+from math import cos, sin
 from operator import itemgetter
 
 
-class HeelingError:
-	""" The algorithm used to correction heeling error magnetic compass"""
-	
-	def __init__(self):
-		pass
-	
-	def correct(self):
-		pass
+def to_horizont(x, y, z, roll, pitch):
+	""" This function used to convert field from non-horizontal to horizontal
+		x,y,z : float : magnetic fields
+		roll, pitch: float : angle in radian
+	"""
+
+	xh = x * cos(pitch) - y * sin(pitch) * sin(roll) - z * sin(pitch) * cos(roll)
+	yh = y * cos(roll) - z * sin(roll)
+	zh = x * sin(pitch) + y * sin(roll) * cos(pitch) + z * cos(pitch) * cos(roll)
+
+	return xh, yh, zh
 
 
 class HardIron:
