@@ -17,28 +17,39 @@ class SensorDataModel(QtCore.QAbstractTableModel):
 	
 	def __init__(self, data=None):
 		super().__init__()
+		self._data = data or []
+
+	def load(self, data):
 		self._data = data
-	
+
+	def append(self, row):
+		#TODO: Bad way, because get access data directly
+		self._data.append(row)
+		self.layoutChanged.emit()
+
 	def rowCount(self, parent=None, *args, **kwargs):
-		return 3 or len(self._data)
+		return len(self._data) or 1
 	
 	def columnCount(self, parent=None, *args, **kwargs):
-		return 1 or len(self._data[0])
+		return len(self._data[0]) or 2
 	
 	def headerData(self, section, orientation, role):
 		if role != QtCore.Qt.DisplayRole:
 			return None
 		if orientation == QtCore.Qt.Horizontal:
-			return ("B", "C")[section]
+			return ("Hx", "Hy")[section]
 		else:
 			return "{}".format(section)
 	
 	def data(self, index, role=QtCore.Qt.DisplayRole):
-		if role == QtCore.Qt.DisplayRole:
-			return self._data[index.row()][index.column()]
-		elif role == QtCore.Qt.TextAlignmentRole:
-			return QtCore.Qt.AlignRight
-	
+		if self._data:
+			if role == QtCore.Qt.DisplayRole:
+				return self._data[index.row()][index.column()]
+			elif role == QtCore.Qt.TextAlignmentRole:
+				return QtCore.Qt.AlignRight
+		else:
+			return None
+
 	def flags(self, index):
 		result = super().flags(index)
 		if index.column() in [0, 1]:
@@ -88,14 +99,10 @@ class Ui(QMainWindow):
 		wgt.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
 		wgt.horizontalHeader().setSectionsMovable(True)
 		wgt.horizontalHeader().setStretchLastSection(True)
-		wgt.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch);
+		wgt.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 		
 		wgt.verticalHeader().setDefaultAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight)
-		
-		# wgt.setSortingEnabled(True)
-		
-		# layout = QGridLayout(wgt)
-		
+
 		return wgt
 
 
@@ -108,13 +115,21 @@ class Magnetic(Ui):
 	def __init__(self, data=None, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.setupUi()
-		
+
+		self.data = data
 		self.model = SensorDataModel(data)
 		self.table.setModel(self.model)
 		
 		self.button.clicked.connect(self.addData)
-		self.buttons['clear'].clicked.connect(lambda: print("Press button <Clear>"))
-	
+		self.buttons['clear'].clicked.connect(self.add)
+
+	def add(self, row):
+		self.model.append((99,-88))
+
+	def clear(self):
+		print(self.model.rowCount())
+		self.data.append((99.0, -99.1))
+
 	def addData(self):
 		self.model.update()
 	
@@ -129,7 +144,7 @@ class Magnetic(Ui):
 
 def debug():
 	dataset = from_excel(
-		path='/downloads/example_dataset.xlsx',
+		path='./downloads/example_dataset.xlsx',
 		sheet_name='Лист6',
 		rangex='H7:H51',
 		rangey='I7:I51'
@@ -152,17 +167,15 @@ def main():
 		myappid = u'navi-dals.magnetic-tools.proxy.001'  # arbitrary string
 		ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 		app.setWindowIcon(QIcon(':/rc/Interdit.ico'))
-	
-	print(__file__)
-	
+
 	dataset = from_excel(
-		path='/home/tech/workspace/python/magnetic-tools/downloads/example_dataset.xlsx',
+		path=args.path_to_dataset,
 		sheet_name='Лист6',
-		rangex='H7:H51',
-		rangey='I7:I51'
+		rangex='H7:H52',
+		rangey='I7:I52'
 	)
-	
-	magnetic = Magnetic()
+
+	magnetic = Magnetic(dataset)
 	magnetic._centre()
 	magnetic.show()
 	
@@ -170,5 +183,10 @@ def main():
 
 
 if __name__ == '__main__':
-	main()
+	import argparse
+	p = argparse.ArgumentParser()
+	p.add_argument('--mode', action='store', dest='mode')
+	p.add_argument('--data', action='store', dest='path_to_dataset')
+	args = p.parse_args()
 
+	main()
