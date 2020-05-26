@@ -1,154 +1,152 @@
 import sys
 
-from PyQt5 import QtCore, uic, QtChart
+from PyQt5 import QtCore, QtChart
+from PyQt5.QtChart import QChart, QChartView, QVXYModelMapper
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtChart import QChart, QChartView
 
 from magnetic.algorithms import Algorithm
 from magnetic.models import SensorDataModel
 from magnetic.util import from_excel, plot
 
 
-# NOTE: Uncomment if use QtDesigner file as Ui
-# from magnetic.ui import magnetic_ui
+class ChartWidget(QChartView):
+	""" The chart widget is widget that display magnetic chart """
 
-class Ui(QMainWindow):
-	""" This class describe graphical user interface """
-	
-	def __init__(self, *args, **kwargs):
-		super().__init__(*args, **kwargs)
+	def __init__(self, parent=None, model=None, *__args):
+		super().__init__(*__args)
+		# Store chart in variable because for support autocomplete
+		self._chart = QChart()
+		self._chart.setAnimationOptions(QChart.NoAnimation)
 
-	def setupUi(self):
-		self.setWindowTitle(f"{__file__}")
-		self.setMinimumSize(600, 500)
-		
-		# Widgets
-		centralWidget = QWidget(self)
+		self.setChart(self._chart)
+		self.setRenderHint(QPainter.Antialiasing)
 
-		# Top widget
-		self.label = QLabel("Filename:", centralWidget)
-		self.edit = QLineEdit(centralWidget)
-		self.edit.setReadOnly(True)
-		self.edit.setObjectName('edit')
+		self.setAxis()
 
-		self.buttons = {}
-		btn = QPushButton("Open...", centralWidget)
-		btn.setObjectName('open')
-		self.buttons['open'] = btn
+		self.models = {}
 
-		splitter = QSplitter(QtCore.Qt.Horizontal, centralWidget)
-		self.table = self.createTable(splitter)
-		splitter.addWidget(self.table)
-
-		self.chart, self.chartview = self.createChart(splitter)
-		splitter.addWidget(self.chartview)
-
-		# Layout
-		centralLayout = QVBoxLayout(centralWidget)
-		self.setCentralWidget(centralWidget)
-
-		pathLayout = QHBoxLayout()
-		pathLayout.addWidget(self.label)
-		pathLayout.addWidget(self.edit)
-		pathLayout.addWidget(self.buttons['open'])
-
-		centralLayout.addLayout(pathLayout)
-		centralLayout.addWidget(splitter)
-
-	def createTable(self, parent):
-		view = QTableView(parent)
-		
-		view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-		view.horizontalHeader().setSectionsMovable(True)
-		view.horizontalHeader().setStretchLastSection(True)
-		view.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-		
-		view.verticalHeader().setDefaultAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight)
-		
-		return view
-
-	def createChart(self, parent=None):
-		chart = QChart()
-		chart.setAnimationOptions(QChart.SeriesAnimations)
-
-		view = QChartView(chart)
-		view.setRenderHint(QPainter.Antialiasing)
-
-		size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-		size_policy.setHorizontalStretch(1)
-		size_policy.setVerticalStretch(0)
-		size_policy.setHeightForWidth(view.sizePolicy().hasHeightForWidth())
-		view.setSizePolicy(size_policy)
-
-		return chart, view
-
-
-# NOTE: This code used to create ui with qtdesigner
-# class Magnetic(QMainWindow, magnetic_ui.Ui_MainWindow):
-# 	def __init__(self, *args, **kwargs):
-# 		super().__init__(*args, **kwargs)
-# 		self.setupUi(self)
-class Magnetic(Ui):
-	def __init__(self, data=None, *args, **kwargs):
-		super().__init__(*args, **kwargs)
-		# NOTE: uncomment for prototype ui
-		#uic.loadUi('./magnetic/ui/magnetic.ui', self)
-		self.setupUi()
-
-		self.data = data
-		self.model = SensorDataModel(data)
-		self.table.setModel(self.model)
-
-		self.add_series("Magnetic Fields (2d-axis)", [0, 1])
-		
-		self.buttons['open'].clicked.connect(self.open_file)
-
-	def open_file(self):
-		pass
-	
-	def add(self, row):
-		self.model.append((99, -88))
-	
-	def clear(self):
-		print(self.model.rowCount())
-		self.data.append((99.0, -99.1))
-	
-	def addData(self):
-		self.model.update()
-
-	def add_series(self, name, columns):
-		self.series = QtChart.QLineSeries()
+	def setModel(self, name, model):
+		self.series = QtChart.QScatterSeries()
 		self.series.setName(name)
 
-		for i in range(self.model.rowCount()):
-			x = float(self.model.index(i, 0).data())
-			y = float(self.model.index(i, 1).data())
-			self.series.append(x, y)
-		self.chart.addSeries(self.series)
+		self.mapper = QVXYModelMapper()
+		self.mapper.setXColumn(0)
+		self.mapper.setYColumn(1)
+		self.mapper.setModel(model)
+		self.mapper.setSeries(self.series)
+		self._chart.addSeries(self.series)
 
+		self.series.attachAxis(self.axis_x)
+		self.series.attachAxis(self.axis_y)
+
+		# TODO: Make different color
+		model.color = "{}".format(self.series.pen().color().name())
+
+	def setAxis(self):
 		# Setting X-axis
 		self.axis_x = QtChart.QValueAxis()
 		self.axis_x.setTickCount(10)
 		self.axis_x.setLabelFormat("%.2f")
-		self.axis_x.setTitleText("B")
+		self.axis_x.setTitleText("Hz, uT")
 		self.axis_x.setRange(-25, 25)
-		self.chart.addAxis(self.axis_x, QtCore.Qt.AlignBottom)
-		self.series.attachAxis(self.axis_x)
+		self._chart.addAxis(self.axis_x, QtCore.Qt.AlignBottom)
 
 		# Setting Y-axis
 		self.axis_y = QtChart.QValueAxis()
 		self.axis_y.setTickCount(10)
 		self.axis_y.setRange(-25, 25)
 		self.axis_y.setLabelFormat("%.2f")
-		self.axis_y.setTitleText("C")
-		self.chart.addAxis(self.axis_y, QtCore.Qt.AlignLeft)
-		self.series.attachAxis(self.axis_y)
+		self.axis_y.setTitleText("Hy, uT")
+		self._chart.addAxis(self.axis_y, QtCore.Qt.AlignLeft)
 
-		# Getting the color from the QChart to use it on the QTableView
-		self.model.color = "{}".format(self.series.pen().color().name())
 
-	
+class Ui(QMainWindow):
+	""" This class describe graphical user interface """
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+
+	def setupUi(self):
+		self.setWindowTitle(f"{__file__}")
+		self.setMinimumSize(800, 600)
+
+		# Widgets
+		centralWidget = QWidget(self)
+
+		# Top widget
+		self.label_x = QLabel("Bx:", centralWidget)
+		self.spin_x = QDoubleSpinBox(centralWidget)
+		self.spin_x.setMinimumWidth(100)
+
+		self.label_y = QLabel("By:", centralWidget)
+		self.spin_y = QDoubleSpinBox(centralWidget)
+		self.spin_y.setMinimumWidth(100)
+
+		self.buttons = {}
+		btn = QPushButton("Add", centralWidget)
+		self.buttons['add'] = btn
+
+		splitter = QSplitter(QtCore.Qt.Horizontal, centralWidget)
+		self.table = self.createTable(splitter)
+		splitter.addWidget(self.table)
+
+		# self.chartview = self.createChart(splitter)
+		self.chartwidget = ChartWidget()
+		size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+		size_policy.setHorizontalStretch(1)
+		size_policy.setVerticalStretch(0)
+		size_policy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
+		self.chartwidget.setSizePolicy(size_policy)
+		splitter.addWidget(self.chartwidget)
+
+		# Layout
+		centralLayout = QVBoxLayout(centralWidget)
+		self.setCentralWidget(centralWidget)
+
+		pathLayout = QHBoxLayout()
+		pathLayout.addWidget(self.label_x)
+		pathLayout.addWidget(self.spin_x)
+		pathLayout.addWidget(self.label_y)
+		pathLayout.addWidget(self.spin_y)
+		pathLayout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+		pathLayout.addWidget(self.buttons['add'])
+
+		centralLayout.addLayout(pathLayout)
+		centralLayout.addWidget(splitter)
+
+	def createTable(self, parent):
+		view = QTableView(parent)
+
+		view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+		view.horizontalHeader().setSectionsMovable(True)
+		view.horizontalHeader().setStretchLastSection(True)
+		view.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+		view.verticalHeader().setDefaultAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignJustify)
+
+		return view
+
+
+class Magnetic(Ui):
+	def __init__(self, data=None, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		# NOTE: uncomment for prototype ui
+		# uic.loadUi('./magnetic/ui/magnetic.ui', self)
+		self.setupUi()
+
+		self.data = data
+		self.model = SensorDataModel(self.data)
+		self.table.setModel(self.model)
+		self.chartwidget.setModel("Magnitude", self.model)
+
+		self.buttons['add'].clicked.connect(self.add_xy)
+
+	def add_xy(self):
+		x = self.spin_x.value()
+		y = self.spin_y.value()
+		self.model.append((x, y))
+
 	def _centre(self):
 		""" This method aligned main window related center screen """
 		frameGm = self.frameGeometry()
@@ -156,7 +154,6 @@ class Magnetic(Ui):
 		centerPoint = QApplication.desktop().screenGeometry(screen).center()
 		frameGm.moveCenter(centerPoint)
 		self.move(frameGm.topLeft())
-
 
 def debug():
 	dataset = from_excel(
