@@ -11,6 +11,7 @@ numpy = "*"
 matplotlib = "*"
 pyqt5 = "*"
 pyserial = "*"
+pyqtchart = "*"
 
 [requires]
 python_version = "3.8"

@@ -1,8 +1,9 @@
 import sys
 
-from PyQt5 import QtCore
+from PyQt5 import QtCore, uic, QtChart
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
+from PyQt5.QtChart import QChart, QChartView
 
 from magnetic.algorithms import Algorithm
 from magnetic.models import SensorDataModel
@@ -24,30 +25,63 @@ class Ui(QMainWindow):
 		
 		# Widgets
 		centralWidget = QWidget(self)
+
+		# Top widget
+		self.label = QLabel("Filename:", centralWidget)
+		self.edit = QLineEdit(centralWidget)
+		self.edit.setReadOnly(True)
+		self.edit.setObjectName('edit')
+
+		self.buttons = {}
+		btn = QPushButton("Open...", centralWidget)
+		btn.setObjectName('open')
+		self.buttons['open'] = btn
+
+		splitter = QSplitter(QtCore.Qt.Horizontal, centralWidget)
+		self.table = self.createTable(splitter)
+		splitter.addWidget(self.table)
+
+		self.chart, self.chartview = self.createChart(splitter)
+		splitter.addWidget(self.chartview)
+
+		# Layout
 		centralLayout = QVBoxLayout(centralWidget)
 		self.setCentralWidget(centralWidget)
+
+		pathLayout = QHBoxLayout()
+		pathLayout.addWidget(self.label)
+		pathLayout.addWidget(self.edit)
+		pathLayout.addWidget(self.buttons['open'])
+
+		centralLayout.addLayout(pathLayout)
+		centralLayout.addWidget(splitter)
+
+	def createTable(self, parent):
+		view = QTableView(parent)
 		
-		self.table = self.createTable()
-		centralLayout.addWidget(self.table)
+		view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+		view.horizontalHeader().setSectionsMovable(True)
+		view.horizontalHeader().setStretchLastSection(True)
+		view.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 		
-		self.buttons = {}
-		self.button = QPushButton("Add", centralWidget)
-		centralLayout.addWidget(self.button)
+		view.verticalHeader().setDefaultAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight)
 		
-		self.buttons['clear'] = QPushButton("Clear", centralWidget)
-		centralLayout.addWidget(self.buttons['clear'])
-	
-	def createTable(self):
-		wgt = QTableView(self)
-		
-		wgt.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-		wgt.horizontalHeader().setSectionsMovable(True)
-		wgt.horizontalHeader().setStretchLastSection(True)
-		wgt.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-		
-		wgt.verticalHeader().setDefaultAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight)
-		
-		return wgt
+		return view
+
+	def createChart(self, parent=None):
+		chart = QChart()
+		chart.setAnimationOptions(QChart.SeriesAnimations)
+
+		view = QChartView(chart)
+		view.setRenderHint(QPainter.Antialiasing)
+
+		size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+		size_policy.setHorizontalStretch(1)
+		size_policy.setVerticalStretch(0)
+		size_policy.setHeightForWidth(view.sizePolicy().hasHeightForWidth())
+		view.setSizePolicy(size_policy)
+
+		return chart, view
 
 
 # NOTE: This code used to create ui with qtdesigner
@@ -58,14 +92,20 @@ class Ui(QMainWindow):
 class Magnetic(Ui):
 	def __init__(self, data=None, *args, **kwargs):
 		super().__init__(*args, **kwargs)
+		# NOTE: uncomment for prototype ui
+		#uic.loadUi('./magnetic/ui/magnetic.ui', self)
 		self.setupUi()
-		
+
 		self.data = data
 		self.model = SensorDataModel(data)
 		self.table.setModel(self.model)
+
+		self.add_series("Magnetic Fields (2d-axis)", [0, 1])
 		
-		self.button.clicked.connect(self.addData)
-		self.buttons['clear'].clicked.connect(self.add)
+		self.buttons['open'].clicked.connect(self.open_file)
+
+	def open_file(self):
+		pass
 	
 	def add(self, row):
 		self.model.append((99, -88))
@@ -76,6 +116,38 @@ class Magnetic(Ui):
 	
 	def addData(self):
 		self.model.update()
+
+	def add_series(self, name, columns):
+		self.series = QtChart.QLineSeries()
+		self.series.setName(name)
+
+		for i in range(self.model.rowCount()):
+			x = float(self.model.index(i, 0).data())
+			y = float(self.model.index(i, 1).data())
+			self.series.append(x, y)
+		self.chart.addSeries(self.series)
+
+		# Setting X-axis
+		self.axis_x = QtChart.QValueAxis()
+		self.axis_x.setTickCount(10)
+		self.axis_x.setLabelFormat("%.2f")
+		self.axis_x.setTitleText("B")
+		self.axis_x.setRange(-25, 25)
+		self.chart.addAxis(self.axis_x, QtCore.Qt.AlignBottom)
+		self.series.attachAxis(self.axis_x)
+
+		# Setting Y-axis
+		self.axis_y = QtChart.QValueAxis()
+		self.axis_y.setTickCount(10)
+		self.axis_y.setRange(-25, 25)
+		self.axis_y.setLabelFormat("%.2f")
+		self.axis_y.setTitleText("C")
+		self.chart.addAxis(self.axis_y, QtCore.Qt.AlignLeft)
+		self.series.attachAxis(self.axis_y)
+
+		# Getting the color from the QChart to use it on the QTableView
+		self.model.color = "{}".format(self.series.pen().color().name())
+
 	
 	def _centre(self):
 		""" This method aligned main window related center screen """

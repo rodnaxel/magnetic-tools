@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "8286e43e0c4c2599ce149670a27b740ac53486734926a3f4da6af3fb30caf4dd"
+            "sha256": "b6e58939065f96a84a154f88c0d0629f4386c80193011c3442da5ce85f9dd9b3"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -151,6 +151,17 @@
             ],
             "version": "==12.7.2"
         },
+        "pyqtchart": {
+            "hashes": [
+                "sha256:2d5193beeab340cf575feecdd5ae27ed2ac5ff6e80c5d6b4891a398872db9008",
+                "sha256:3d15217d10bb4387e024c25a9cb157d34288ef201f8160384e80a2087bf52583",
+                "sha256:704ef294a289c2a7955101206ababb5ba401788695a88d502e15ae3dedefb712",
+                "sha256:8c8d0f873c5c80448644158be41d0ecd3d6168db06f657208d0b5c9404683edb",
+                "sha256:f9004861441becab7a4a48e834da14c3976e4c03e5513c93e005d5df36085046"
+            ],
+            "index": "pypi",
+            "version": "==5.14.0"
+        },
         "pyserial": {
             "hashes": [
                 "sha256:6e2d401fdee0eab996cf734e67773a0143b932772ca8b42451440cfed942c627",
@@ -168,10 +179,10 @@
         },
         "six": {
             "hashes": [
-                "sha256:236bdbdce46e6e6a3d61a337c0f8b763ca1e8717c03b369e87a7ec7ce1319c0a",
-                "sha256:8f3cd2e254d8f793e7f3d6d9df77b92252b52637291d0f0da013c76ea2724b6c"
+                "sha256:30639c035cdb23534cd4aa2dd52c3bf48f06e5f4a941509c8bafd8ce11080259",
+                "sha256:8b74bedcbbbaca38ff6d7491d76f2b06b3592611af620f8426e82dddb04a5ced"
             ],
-            "version": "==1.14.0"
+            "version": "==1.15.0"
         }
     },
     "develop": {}
