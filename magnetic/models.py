@@ -4,21 +4,23 @@ from PyQt5.QtGui import QColor
 
 class SensorDataModel(QAbstractTableModel):
     """ The model represented sensor data (by dorient)"""
-    section_names = ("Hx", "Hy", "Hz", "Heading", "Roll", "Pitch")
+    # section_names = ("Hx", "Hy", "Hz", "Heading", "Roll", "Pitch")
+    section_names = ("Hx", "Hy")
+    cols = len(section_names)
 
     def __init__(self, data: list = None):
         super().__init__()
-        self._data = []
+        self._data = data
 
         self.cell_color = Qt.white
 
-    def loadData(self, data: list):
+    def load_data(self, data: list):
         self._data = data
 
-    def fetchData(self):
+    def fetch_data(self):
         return self._data
 
-    def appendItem(self, bx: float, by: float):
+    def append_item(self, bx: float, by: float):
         r = len(self._data)
         self.beginInsertRows(QModelIndex(), r, r)
         self._data.append((bx, by))
@@ -32,7 +34,7 @@ class SensorDataModel(QAbstractTableModel):
     def columnCount(self, parent=None, *args, **kwargs):
         if not (parent.isValid() or self._data):
             return len(self.section_names)
-        return len(self._data[0])
+        return self.cols
 
     def headerData(self, section, orientation, role):
         if role != Qt.DisplayRole:
@@ -40,12 +42,15 @@ class SensorDataModel(QAbstractTableModel):
         if orientation == Qt.Horizontal:
             return self.section_names[section]
         else:
-            return "{}".format(section)
+            return "{}".format(section + 1)
 
     def data(self, index, role=Qt.DisplayRole):
         if self._data:
             if role == Qt.DisplayRole:
-                return self._data[index.row()][index.column()]
+                try:
+                    return self._data[index.row()][index.column()]
+                except IndexError:
+                    return None
             elif role == Qt.TextAlignmentRole:
                 return Qt.AlignRight
             elif role == Qt.BackgroundRole:

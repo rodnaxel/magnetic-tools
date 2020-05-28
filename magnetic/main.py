@@ -93,7 +93,7 @@ class Magnetic(Ui):
 	def add_xy(self):
 		x = self.spin_x.value()
 		y = self.spin_y.value()
-		self.model.appendItem(x, y)
+		self.model.append_item(x, y)
 
 	def _centre(self):
 		""" This method aligned main window related center screen """
