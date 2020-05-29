@@ -30,27 +30,40 @@ class Ui(QMainWindow):
 	def setupUi(self):
 		self.setWindowTitle(f"{__file__}")
 		self.setMinimumSize(800, 600)
-		
+
 		# Widgets
 		centralWidget = QWidget(self)
-		
-		# Top widget
+
+		# Menu
+		self.menu = self.menuBar()
+		self.file_menu = self.menu.addMenu("File")
+		exit_action = QAction("Exit", self)
+		exit_action.triggered.connect(self.close)
+		self.file_menu.addAction(exit_action)
+
+		# Status bar
+		self.status = self.statusBar()
+		self.status.showMessage("Data loaded and plotted")
+
+		# Top bar
 		self.label_x = QLabel("Hx:", centralWidget)
 		self.spin_x = QDoubleSpinBox(centralWidget)
 		self.spin_x.setMinimumWidth(100)
-		
+
 		self.label_y = QLabel("Hy:", centralWidget)
 		self.spin_y = QDoubleSpinBox(centralWidget)
 		self.spin_y.setMinimumWidth(100)
-		
+
 		self.buttons = {}
 		btn = QPushButton("Add", centralWidget)
 		self.buttons['add'] = btn
-		
+
+		# Table
 		splitter = QSplitter(QtCore.Qt.Horizontal, centralWidget)
 		self.table = SensorDataTable(splitter)
 		splitter.addWidget(self.table)
-		
+
+		# Chart
 		self.chartwidget = ChartWidget()
 		size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 		size_policy.setHorizontalStretch(1)
@@ -58,7 +71,7 @@ class Ui(QMainWindow):
 		size_policy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
 		self.chartwidget.setSizePolicy(size_policy)
 		splitter.addWidget(self.chartwidget)
-		
+
 		# Layout
 		centralLayout = QVBoxLayout(centralWidget)
 		self.setCentralWidget(centralWidget)
