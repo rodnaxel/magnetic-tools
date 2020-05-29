@@ -10,37 +10,47 @@ from magnetic.models import SensorDataModel
 from magnetic.util import from_excel, get_arguments
 
 
+class SensorDataTable(QTableView):
+	def __init__(self, parent):
+		super().__init__(parent)
+		
+		self.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+		self.horizontalHeader().setSectionsMovable(True)
+		self.horizontalHeader().setStretchLastSection(False)
+		self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+		self.verticalHeader().setDefaultAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignJustify)
+
+
 class Ui(QMainWindow):
 	""" This class describe graphical user interface """
-
+	
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-
+	
 	def setupUi(self):
 		self.setWindowTitle(f"{__file__}")
 		self.setMinimumSize(800, 600)
-
+		
 		# Widgets
 		centralWidget = QWidget(self)
-
+		
 		# Top widget
-		self.label_x = QLabel("Bx:", centralWidget)
+		self.label_x = QLabel("Hx:", centralWidget)
 		self.spin_x = QDoubleSpinBox(centralWidget)
 		self.spin_x.setMinimumWidth(100)
-
-		self.label_y = QLabel("By:", centralWidget)
+		
+		self.label_y = QLabel("Hy:", centralWidget)
 		self.spin_y = QDoubleSpinBox(centralWidget)
 		self.spin_y.setMinimumWidth(100)
-
+		
 		self.buttons = {}
 		btn = QPushButton("Add", centralWidget)
 		self.buttons['add'] = btn
-
+		
 		splitter = QSplitter(QtCore.Qt.Horizontal, centralWidget)
-		self.table = self.createTable(splitter)
+		self.table = SensorDataTable(splitter)
 		splitter.addWidget(self.table)
-
-		# self.chartview = self.createChart(splitter)
+		
 		self.chartwidget = ChartWidget()
 		size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 		size_policy.setHorizontalStretch(1)
@@ -48,33 +58,21 @@ class Ui(QMainWindow):
 		size_policy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
 		self.chartwidget.setSizePolicy(size_policy)
 		splitter.addWidget(self.chartwidget)
-
+		
 		# Layout
 		centralLayout = QVBoxLayout(centralWidget)
 		self.setCentralWidget(centralWidget)
-
-		pathLayout = QHBoxLayout()
-		pathLayout.addWidget(self.label_x)
-		pathLayout.addWidget(self.spin_x)
-		pathLayout.addWidget(self.label_y)
-		pathLayout.addWidget(self.spin_y)
-		pathLayout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
-		pathLayout.addWidget(self.buttons['add'])
-
-		centralLayout.addLayout(pathLayout)
+		
+		addLayout = QHBoxLayout()
+		addLayout.addWidget(self.label_x)
+		addLayout.addWidget(self.spin_x)
+		addLayout.addWidget(self.label_y)
+		addLayout.addWidget(self.spin_y)
+		addLayout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+		addLayout.addWidget(self.buttons['add'])
+		
+		centralLayout.addLayout(addLayout)
 		centralLayout.addWidget(splitter)
-
-	def createTable(self, parent):
-		view = QTableView(parent)
-
-		view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-		view.horizontalHeader().setSectionsMovable(True)
-		view.horizontalHeader().setStretchLastSection(True)
-		view.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-
-		view.verticalHeader().setDefaultAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignJustify)
-
-		return view
 
 
 class Magnetic(Ui):
