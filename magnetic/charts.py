@@ -45,6 +45,7 @@ class ChartWidget(QChartView):
 		# Store chart in variable because for support autocomplete
 		self._chart = QChart()
 		self._chart.setAnimationOptions(QChart.NoAnimation)
+		# self._chart.setTheme(QChart.ChartThemeDark)
 
 		self.setChart(self._chart)
 		self.setRenderHint(QPainter.Antialiasing)
@@ -71,6 +72,8 @@ class ChartWidget(QChartView):
 		model.cell_color = "{}".format(series.color().name())
 
 		self.series = series
+
+	# self.chartarea = self._chart.ChartA
 
 	def setAxis(self):
 		# Setting X-axis
