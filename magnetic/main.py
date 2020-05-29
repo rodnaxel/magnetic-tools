@@ -41,6 +41,10 @@ class Ui(QMainWindow):
 		exit_action.triggered.connect(self.close)
 		self.file_menu.addAction(exit_action)
 
+		open_action = QAction("Open", self)
+		open_action.triggered.connect(self.action_open)
+		self.file_menu.addAction(open_action)
+
 		# Status bar
 		self.status = self.statusBar()
 		self.status.showMessage("Data loaded and plotted")
@@ -57,6 +61,8 @@ class Ui(QMainWindow):
 		self.buttons = {}
 		btn = QPushButton("Add", centralWidget)
 		self.buttons['add'] = btn
+		btn = QPushButton("Delete All", centralWidget)
+		self.buttons['delete_all'] = btn
 
 		# Table
 		splitter = QSplitter(QtCore.Qt.Horizontal, centralWidget)
@@ -75,7 +81,7 @@ class Ui(QMainWindow):
 		# Layout
 		centralLayout = QVBoxLayout(centralWidget)
 		self.setCentralWidget(centralWidget)
-		
+
 		addLayout = QHBoxLayout()
 		addLayout.addWidget(self.label_x)
 		addLayout.addWidget(self.spin_x)
@@ -83,9 +89,20 @@ class Ui(QMainWindow):
 		addLayout.addWidget(self.spin_y)
 		addLayout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 		addLayout.addWidget(self.buttons['add'])
-		
+		addLayout.addWidget(self.buttons['delete_all'])
+
 		centralLayout.addLayout(addLayout)
 		centralLayout.addWidget(splitter)
+
+	def action_open(self):
+		fname = QFileDialog.getOpenFileName()
+		print(fname)
+		dataset = from_excel(
+			path=fname,
+			sheet_name='Лист6',
+			rangex='H7:H52',
+			rangey='I7:I52'
+		)
 
 
 class Magnetic(Ui):
@@ -100,11 +117,15 @@ class Magnetic(Ui):
 		self.chartwidget.setModel("Magnitude", self.model)
 
 		self.buttons['add'].clicked.connect(self.add_xy)
+		self.buttons['delete_all'].clicked.connect(self.delete_all)
 
 	def add_xy(self):
 		x = self.spin_x.value()
 		y = self.spin_y.value()
 		self.model.append_item(x, y)
+
+	def delete_all(self):
+		self.model.reset()
 
 	def _centre(self):
 		""" This method aligned main window related center screen """

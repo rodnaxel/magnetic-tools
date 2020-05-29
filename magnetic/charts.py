@@ -4,6 +4,39 @@ from PyQt5.QtChart import QChartView, QChart, QVXYModelMapper
 from PyQt5.QtGui import QPainter
 
 
+class ScatterChart(QChart):
+	def __init__(self, flags, *args, **kwargs):
+		super().__init__(flags, *args, **kwargs)
+		self.animationOptions(QChart.NoAnimation)
+
+	def setAxis(self):
+		# Setting X-axis
+		self.axis_x = QtChart.QValueAxis()
+		self.axis_x.setTickCount(10)
+		self.axis_x.setLabelFormat("%.1f")
+		self.axis_x.setTitleText("Hz, uT")
+		self.axis_x.setRange(-25, 25)
+		self.addAxis(self.axis_x, QtCore.Qt.AlignBottom)
+
+		# Setting Y-axis
+		self.axis_y = QtChart.QValueAxis()
+		self.axis_y.setTickCount(10)
+		self.axis_y.setRange(-25, 25)
+		self.axis_y.setLabelFormat("%.1f")
+		self.axis_y.setTitleText("Hy, uT")
+		self.addAxis(self.axis_y, QtCore.Qt.AlignLeft)
+
+	def add_series(self, name):
+		series = QtChart.QScatterSeries()
+		series.setName(name)
+		self.addSeries(series)
+		series.attachAxis(self.axis_x)
+		series.attachAxis(self.axis_y)
+
+	def remove_series(self, name):
+		pass
+
+
 class ChartWidget(QChartView):
 	""" The chart widget is widget that display magnetic chart """
 
@@ -21,21 +54,23 @@ class ChartWidget(QChartView):
 		self.models = {}
 
 	def setModel(self, name, model):
-		self.series = QtChart.QScatterSeries()
-		self.series.setName(name)
+		series = QtChart.QScatterSeries()
+		series.setName(name)
+		series.setMarkerSize(5)
+		self._chart.addSeries(series)
+		series.attachAxis(self.axis_x)
+		series.attachAxis(self.axis_y)
 
 		self.mapper = QVXYModelMapper()
 		self.mapper.setXColumn(0)
 		self.mapper.setYColumn(1)
 		self.mapper.setModel(model)
-		self.mapper.setSeries(self.series)
-		self._chart.addSeries(self.series)
-
-		self.series.attachAxis(self.axis_x)
-		self.series.attachAxis(self.axis_y)
+		self.mapper.setSeries(series)
 
 		# TODO: Make different color
-		model.color = "{}".format(self.series.pen().color().name())
+		model.cell_color = "{}".format(series.color().name())
+
+		self.series = series
 
 	def setAxis(self):
 		# Setting X-axis

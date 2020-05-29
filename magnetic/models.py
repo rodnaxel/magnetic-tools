@@ -10,7 +10,7 @@ class SensorDataModel(QAbstractTableModel):
 
     def __init__(self, data: list = None):
         super().__init__()
-        self._data = data
+        self._data = data or []
 
         self.cell_color = Qt.white
 
@@ -63,3 +63,8 @@ class SensorDataModel(QAbstractTableModel):
         if index.column() in [0, 1]:
             result &= ~Qt.ItemIsEditable
         return result
+
+    def reset(self):
+        self.beginResetModel()
+        self._data = []
+        self.endResetModel()
