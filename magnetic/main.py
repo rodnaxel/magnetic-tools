@@ -1,3 +1,4 @@
+import os.path
 import sys
 
 from PyQt5 import QtCore
@@ -111,13 +112,16 @@ class Ui(QMainWindow):
 	def action_save(self):
 		raise NotImplementedError
 
+
 class Magnetic(Ui):
-	def __init__(self, data=None, *args, **kwargs):
+	def __init__(self, data=None, title=None, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		# NOTE: uncomment for prototype ui
 		# uic.loadUi('./magnetic/ui/magnetic.ui', self)
 		self.setupUi()
-
+		
+		self.setWindowTitle(title)
+		
 		self.model = SensorDataModel(data)
 		self.table.setModel(self.model)
 		self.chartwidget.setModel("Magnitude", self.model)
@@ -149,6 +153,8 @@ class Magnetic(Ui):
 			dataset = from_csv(fname)
 			self.status.showMessage(f"Load data", 1000)
 			self.setWindowTitle(fname)
+			self.model.reset()
+			self.model.load_data(dataset)
 		else:
 			self.status.showMessage(f"No load data")
 	
@@ -165,7 +171,7 @@ class Magnetic(Ui):
 		else:
 			self.status.showMessage(f"No save")
 	
-	def _centre(self):
+	def centre(self):
 		""" This method aligned main window related center screen """
 		frameGm = self.frameGeometry()
 		screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
@@ -199,20 +205,22 @@ def main():
 		myappid = u'navi-dals.magnetic-tools.proxy.001'  # arbitrary string
 		ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 		app.setWindowIcon(QIcon(':/rc/Interdit.ico'))
-
+	
+	# Load example data to dataset
+	filename = os.path.abspath(args.path_to_dataset)
 	dataset = from_excel(
-		path=args.path_to_dataset,
+		path=filename,
 		sheet_name='Лист6',
 		rangex='H7:H52',
 		rangey='I7:I52'
 	)
-
-	magnetic = Magnetic(dataset)
-	magnetic._centre()
+	
+	magnetic = Magnetic(dataset, filename)
+	magnetic.centre()
 	magnetic.show()
-
+	
 	# app.setStyle("Fusion")
-
+	
 	# TODO: Add DarkTheme
 	# Now use a palette to switch to dark colors:
 	# palette = QPalette()

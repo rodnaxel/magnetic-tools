@@ -16,6 +16,7 @@ class SensorDataModel(QAbstractTableModel):
 
     def load_data(self, data: list):
         self._data = data
+        self.modelReset.emit()
 
     def fetch_data(self):
         return self._data

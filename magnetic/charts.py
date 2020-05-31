@@ -57,11 +57,11 @@ class ChartWidget(QChartView):
 	def setModel(self, name, model):
 		series = QtChart.QScatterSeries()
 		series.setName(name)
-		series.setMarkerSize(5)
+		series.setMarkerSize(8)
 		self._chart.addSeries(series)
 		series.attachAxis(self.axis_x)
 		series.attachAxis(self.axis_y)
-
+		
 		self.mapper = QVXYModelMapper()
 		self.mapper.setXColumn(0)
 		self.mapper.setYColumn(1)
@@ -79,16 +79,16 @@ class ChartWidget(QChartView):
 		# Setting X-axis
 		self.axis_x = QtChart.QValueAxis()
 		self.axis_x.setTickCount(10)
-		self.axis_x.setLabelFormat("%.2f")
-		self.axis_x.setTitleText("Hz, uT")
+		self.axis_x.setLabelFormat("%.1f")
+		self.axis_x.setTitleText("Hx, uT")
 		self.axis_x.setRange(-25, 25)
 		self._chart.addAxis(self.axis_x, QtCore.Qt.AlignBottom)
-
+		
 		# Setting Y-axis
 		self.axis_y = QtChart.QValueAxis()
 		self.axis_y.setTickCount(10)
 		self.axis_y.setRange(-25, 25)
-		self.axis_y.setLabelFormat("%.2f")
+		self.axis_y.setLabelFormat("%.1f")
 		self.axis_y.setTitleText("Hy, uT")
 		self._chart.addAxis(self.axis_y, QtCore.Qt.AlignLeft)
 
