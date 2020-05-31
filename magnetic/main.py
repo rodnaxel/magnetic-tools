@@ -133,6 +133,9 @@ class Magnetic(Ui):
 	def delete_all(self):
 		self.model.reset()
 	
+	def calibrate(self):
+		pass
+	
 	def action_open(self):
 		fname, _ = QFileDialog.getOpenFileName(
 			self,
@@ -144,7 +147,10 @@ class Magnetic(Ui):
 		
 		if fname:
 			dataset = from_csv(fname)
-			print(dataset)
+			self.status.showMessage(f"Load data", 1000)
+			self.setWindowTitle(fname)
+		else:
+			self.status.showMessage(f"No load data")
 	
 	def action_save(self):
 		fname, _ = QFileDialog.getSaveFileName(
@@ -154,18 +160,10 @@ class Magnetic(Ui):
 			"Data (*.csv)"
 		)
 		if fname:
-			row = self.model.rowCount()
-			col = self.model.columnCount()
-			
-			dataset = []
-			for i in range(row):
-				item = []
-				for j in range(col):
-					index = self.model.createIndex(i, j)
-					value = self.model.data(index)
-					item.append(value)
-				dataset.append(item)
-			to_csv(fname, dataset)
+			to_csv(fname, self.model.fetch_data())
+			self.status.showMessage(f"Save data to  {fname}", 1000)
+		else:
+			self.status.showMessage(f"No save")
 	
 	def _centre(self):
 		""" This method aligned main window related center screen """
