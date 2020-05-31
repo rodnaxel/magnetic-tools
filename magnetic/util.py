@@ -26,8 +26,10 @@ def to_excel(path=None):
 	wb.save('./downloads/sample.xlsx')
 
 
-def from_csv():
-	pass
+def from_csv(fname):
+	with open(fname, "r") as f:
+		reader = csv.reader(f, quoting=csv.QUOTE_NONNUMERIC)
+		return [row for row in reader]
 
 
 def to_csv(fname, data):

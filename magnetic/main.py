@@ -1,14 +1,13 @@
 import sys
 
 from PyQt5 import QtCore
-from PyQt5.QtCore import QAbstractItemModel
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from magnetic.algorithms import Algorithm
 from magnetic.charts import ChartWidget, MatplotlibChart
 from magnetic.models import SensorDataModel
-from magnetic.util import from_excel, get_arguments, to_csv
+from magnetic.util import from_excel, get_arguments, to_csv, from_csv
 
 
 class SensorDataTable(QTableView):
@@ -102,19 +101,12 @@ class Ui(QMainWindow):
 		addLayout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 		addLayout.addWidget(self.buttons['add'])
 		addLayout.addWidget(self.buttons['delete_all'])
-
+		
 		centralLayout.addLayout(addLayout)
 		centralLayout.addWidget(splitter)
 	
 	def action_open(self):
-		fname = QFileDialog.getOpenFileName()
-		print(fname)
-		dataset = from_excel(
-			path=fname,
-			sheet_name='Лист6',
-			rangex='H7:H52',
-			rangey='I7:I52'
-		)
+		raise NotImplementedError
 	
 	def action_save(self):
 		raise NotImplementedError
@@ -141,12 +133,25 @@ class Magnetic(Ui):
 	def delete_all(self):
 		self.model.reset()
 	
+	def action_open(self):
+		fname, _ = QFileDialog.getOpenFileName(
+			self,
+			"Open",
+			"/home/tech/workspace/python/magnetic-tools/downloads/",
+			"Data (*.csv)"
+		)
+		print(fname, _)
+		
+		if fname:
+			dataset = from_csv(fname)
+			print(dataset)
+	
 	def action_save(self):
 		fname, _ = QFileDialog.getSaveFileName(
 			self,
 			"Save file as...",
 			"/home/tech/workspace/python/magnetic-tools/downloads/",
-			"Data (*.csv, *.xls)"
+			"Data (*.csv)"
 		)
 		if fname:
 			row = self.model.rowCount()
