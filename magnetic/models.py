@@ -27,12 +27,12 @@ class SensorDataModel(QAbstractTableModel):
         self.endInsertRows()
 
     def rowCount(self, parent=None, *args, **kwargs):
-        if not (parent.isValid() or self._data):
+        if not self._data:
             return 0
         return len(self._data)
 
     def columnCount(self, parent=None, *args, **kwargs):
-        if not (parent.isValid() or self._data):
+        if not self._data:
             return len(self.section_names)
         return self.cols
 

@@ -1,13 +1,14 @@
 import sys
 
 from PyQt5 import QtCore
+from PyQt5.QtCore import QAbstractItemModel
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from magnetic.algorithms import Algorithm
 from magnetic.charts import ChartWidget, MatplotlibChart
 from magnetic.models import SensorDataModel
-from magnetic.util import from_excel, get_arguments
+from magnetic.util import from_excel, get_arguments, to_csv
 
 
 class SensorDataTable(QTableView):
@@ -30,30 +31,41 @@ class Ui(QMainWindow):
 	def setupUi(self):
 		self.setWindowTitle(f"{__file__}")
 		self.setMinimumSize(800, 600)
-
+		
 		# Widgets
 		centralWidget = QWidget(self)
-
+		
 		# Menu
 		self.menu = self.menuBar()
+		
+		# File
 		self.file_menu = self.menu.addMenu("File")
+		open_action = QAction("Open...", self)
+		open_action.triggered.connect(self.action_open)
+		self.file_menu.addAction(open_action)
+		
+		save_action = QAction("Save as...", self)
+		save_action.triggered.connect(self.action_save)
+		self.file_menu.addAction(save_action)
+		
+		self.file_menu.addSeparator()
+		
 		exit_action = QAction("Exit", self)
 		exit_action.triggered.connect(self.close)
 		self.file_menu.addAction(exit_action)
-
-		open_action = QAction("Open", self)
-		open_action.triggered.connect(self.action_open)
-		self.file_menu.addAction(open_action)
-
+		
+		# Tools
+		self.tool_menu = self.menu.addMenu("Tools")
+		
 		# Status bar
 		self.status = self.statusBar()
 		self.status.showMessage("Data loaded and plotted")
-
+		
 		# Top bar
 		self.label_x = QLabel("Hx:", centralWidget)
 		self.spin_x = QDoubleSpinBox(centralWidget)
 		self.spin_x.setMinimumWidth(100)
-
+		
 		self.label_y = QLabel("Hy:", centralWidget)
 		self.spin_y = QDoubleSpinBox(centralWidget)
 		self.spin_y.setMinimumWidth(100)
@@ -93,7 +105,7 @@ class Ui(QMainWindow):
 
 		centralLayout.addLayout(addLayout)
 		centralLayout.addWidget(splitter)
-
+	
 	def action_open(self):
 		fname = QFileDialog.getOpenFileName()
 		print(fname)
@@ -103,7 +115,9 @@ class Ui(QMainWindow):
 			rangex='H7:H52',
 			rangey='I7:I52'
 		)
-
+	
+	def action_save(self):
+		raise NotImplementedError
 
 class Magnetic(Ui):
 	def __init__(self, data=None, *args, **kwargs):
@@ -115,18 +129,39 @@ class Magnetic(Ui):
 		self.model = SensorDataModel(data)
 		self.table.setModel(self.model)
 		self.chartwidget.setModel("Magnitude", self.model)
-
+		
 		self.buttons['add'].clicked.connect(self.add_xy)
 		self.buttons['delete_all'].clicked.connect(self.delete_all)
-
+	
 	def add_xy(self):
 		x = self.spin_x.value()
 		y = self.spin_y.value()
 		self.model.append_item(x, y)
-
+	
 	def delete_all(self):
 		self.model.reset()
-
+	
+	def action_save(self):
+		fname, _ = QFileDialog.getSaveFileName(
+			self,
+			"Save file as...",
+			"/home/tech/workspace/python/magnetic-tools/downloads/",
+			"Data (*.csv, *.xls)"
+		)
+		if fname:
+			row = self.model.rowCount()
+			col = self.model.columnCount()
+			
+			dataset = []
+			for i in range(row):
+				item = []
+				for j in range(col):
+					index = self.model.createIndex(i, j)
+					value = self.model.data(index)
+					item.append(value)
+				dataset.append(item)
+			to_csv(fname, dataset)
+	
 	def _centre(self):
 		""" This method aligned main window related center screen """
 		frameGm = self.frameGeometry()
