@@ -15,6 +15,7 @@ class SensorDataModel(QAbstractTableModel):
         self._data = data or []
 
         self.cell_color = Qt.white
+        self.cell_color2 = Qt.white
 
     def load_data(self, data: list):
         self._data = data
@@ -57,7 +58,10 @@ class SensorDataModel(QAbstractTableModel):
             elif role == Qt.TextAlignmentRole:
                 return Qt.AlignRight
             elif role == Qt.BackgroundRole:
-                return QColor(self.cell_color)
+                if index.column() > 1:
+                    return QColor(self.cell_color2)
+                else:
+                    return QColor(self.cell_color)
         else:
             return None
 

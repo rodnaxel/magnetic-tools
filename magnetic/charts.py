@@ -46,16 +46,19 @@ class ChartWidget(QChartView):
 		self._chart = QChart()
 		self._chart.setAnimationOptions(QChart.NoAnimation)
 		# self._chart.setTheme(QChart.ChartThemeDark)
-
+		
 		self.setChart(self._chart)
 		self.setRenderHint(QPainter.Antialiasing)
-
+		
 		self.setAxis()
-
+		
 		self.models = {}
-
-	def setModel(self, name, model):
+		self.mappers = {}
+	
+	def setModel(self, model):
 		self.model = model
+	
+	def add_graph(self, name, model=None, xcol=None, ycol=None):
 		series = QtChart.QScatterSeries()
 		series.setName(name)
 		series.setMarkerSize(8)
@@ -63,38 +66,16 @@ class ChartWidget(QChartView):
 		series.attachAxis(self.axis_x)
 		series.attachAxis(self.axis_y)
 		
-		self.mapper = QVXYModelMapper()
-		self.mapper.setXColumn(0)
-		self.mapper.setYColumn(1)
-		self.mapper.setModel(model)
-		self.mapper.setSeries(series)
+		if model:
+			mapper = QVXYModelMapper()
+			mapper.setXColumn(xcol)
+			mapper.setYColumn(ycol)
+			mapper.setModel(self.model)
+			mapper.setSeries(series)
+			self.mappers[name] = mapper
 		
-		# TODO: Make different color
-		model.cell_color = "{}".format(series.color().name())
-		
-		self.series = series
-	
-	def add_graph(self):
-		series = QtChart.QScatterSeries()
-		series.setName("series2")
-		series.setMarkerSize(8)
-		self._chart.addSeries(series)
-		series.attachAxis(self.axis_x)
-		series.attachAxis(self.axis_y)
-		
-		self.mapper2 = QVXYModelMapper()
-		self.mapper2.setXColumn(2)
-		self.mapper2.setYColumn(3)
-		self.mapper2.setModel(self.model)
-		self.mapper2.setSeries(series)
-		
-		# TODO: Make different color
 		self.model.cell_color = "{}".format(series.color().name())
 		
-		self.series2 = series
-	
-	# self.chartarea = self._chart.ChartA
-	
 	def setAxis(self):
 		# Setting X-axis
 		self.axis_x = QtChart.QValueAxis()

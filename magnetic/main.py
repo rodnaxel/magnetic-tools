@@ -1,4 +1,3 @@
-import os.path
 import sys
 
 from PyQt5 import QtCore
@@ -38,7 +37,7 @@ class Ui(QMainWindow):
 		# Menu
 		self.menu = self.menuBar()
 		
-		# File
+		# ...File
 		self.file_menu = self.menu.addMenu("File")
 		open_action = QAction("Open...", self)
 		open_action.triggered.connect(self.action_open)
@@ -54,29 +53,28 @@ class Ui(QMainWindow):
 		exit_action.triggered.connect(self.close)
 		self.file_menu.addAction(exit_action)
 		
-		# Tools
-		self.tool_menu = self.menu.addMenu("Tools")
-		
 		# Status bar
 		self.status = self.statusBar()
 		self.status.showMessage("Data loaded and plotted")
 		
-		# Top bar
-		self.label_x = QLabel("Hx:", centralWidget)
-		self.spin_x = QDoubleSpinBox(centralWidget)
-		self.spin_x.setMinimumWidth(100)
+		# Parameter Bar
+		self.deviation_ratio = {}
+		parameterbar = QHBoxLayout()
+		for name in ('Bias Hx', 'Bias Hy', 'Phi', 'k'):
+			label = QLabel(name + ":", centralWidget)
+			spin = QDoubleSpinBox(centralWidget)
+			spin.setReadOnly(True)
+			parameterbar.addWidget(label)
+			parameterbar.addWidget(spin)
+			self.deviation_ratio[name] = spin
 		
-		self.label_y = QLabel("Hy:", centralWidget)
-		self.spin_y = QDoubleSpinBox(centralWidget)
-		self.spin_y.setMinimumWidth(100)
+		parameterbar.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 		
 		self.buttons = {}
-		btn = QPushButton("Add", centralWidget)
-		self.buttons['add'] = btn
-		btn = QPushButton("Delete All", centralWidget)
-		self.buttons['delete_all'] = btn
-		btn = QPushButton("Calibrate", centralWidget)
-		self.buttons["calibrate"] = btn
+		for name in ("add", "clear", "calibrate"):
+			btn = QPushButton(name.capitalize(), centralWidget)
+			parameterbar.addWidget(btn)
+			self.buttons[name] = btn
 		
 		# Table
 		splitter = QSplitter(QtCore.Qt.Horizontal, centralWidget)
@@ -90,23 +88,14 @@ class Ui(QMainWindow):
 		size_policy.setVerticalStretch(0)
 		size_policy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
 		self.chartwidget.setSizePolicy(size_policy)
+		self.chartwidget.setMaximumWidth(self.chartwidget.maximumHeight())
 		splitter.addWidget(self.chartwidget)
-
+		
 		# Layout
 		centralLayout = QVBoxLayout(centralWidget)
 		self.setCentralWidget(centralWidget)
 		
-		addLayout = QHBoxLayout()
-		addLayout.addWidget(self.label_x)
-		addLayout.addWidget(self.spin_x)
-		addLayout.addWidget(self.label_y)
-		addLayout.addWidget(self.spin_y)
-		addLayout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
-		addLayout.addWidget(self.buttons['add'])
-		addLayout.addWidget(self.buttons['delete_all'])
-		addLayout.addWidget(self.buttons['calibrate'])
-		
-		centralLayout.addLayout(addLayout)
+		centralLayout.addLayout(parameterbar)
 		centralLayout.addWidget(splitter)
 	
 	def action_open(self):
@@ -117,31 +106,36 @@ class Ui(QMainWindow):
 
 
 class Magnetic(Ui):
+	app_title = "Magnetic Viewer - {0}"
+	
 	def __init__(self, data=None, title=None, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		# NOTE: uncomment for prototype ui
 		# uic.loadUi('./magnetic/ui/magnetic.ui', self)
 		self.setupUi()
 		
-		self.setWindowTitle(title)
+		self.setWindowTitle(self.app_title.format(title))
 		
-		self.model = SensorDataModel(data)
+		self.model = SensorDataModel()
 		self.table.setModel(self.model)
-		self.chartwidget.setModel("Magnitude", self.model)
+		self.chartwidget.setModel(self.model)
+		# self.chartwidget.add_graph("Initial Magniude", xcol=0, ycol=1)
 		
 		self.buttons['add'].clicked.connect(self.add_xy)
-		self.buttons['delete_all'].clicked.connect(self.delete_all)
+		self.buttons['clear'].clicked.connect(self.delete_all)
 		self.buttons['calibrate'].clicked.connect(self.calibrate)
 	
 	def add_xy(self):
-		x = self.spin_x.value()
-		y = self.spin_y.value()
-		self.model.append_item(x, y)
+		print(self.table.selectedIndexes())
 	
 	def delete_all(self):
 		self.model.reset()
+		self.setWindowTitle(self.app_title)
 	
 	def calibrate(self):
+		if not self.model.fetch_data():
+			self.status.showMessage("No loaded data")
+			return
 		dataset_initial = self.model.fetch_data()
 		maxdub = Algorithm(dataset_initial)
 		dataset_correction = [maxdub.correct(x, y) for (x, y) in dataset_initial]
@@ -149,8 +143,7 @@ class Magnetic(Ui):
 		union_ = [(x, y, round(xc, 1), round(yc, 1)) for (x, y), (xc, yc) in zip(dataset_initial, dataset_correction)]
 		self.model.reset()
 		self.model.load_data(union_)
-		
-		self.chartwidget.add_graph()
+		self.chartwidget.add_graph(name="Correction Magnitude", model=self.model, xcol=2, ycol=3)
 	
 	def action_open(self):
 		fname, _ = QFileDialog.getOpenFileName(
@@ -159,14 +152,14 @@ class Magnetic(Ui):
 			"/home/tech/workspace/python/magnetic-tools/downloads/",
 			"Data (*.csv)"
 		)
-		print(fname, _)
 		
 		if fname:
 			dataset = from_csv(fname)
 			self.status.showMessage(f"Load data", 1000)
-			self.setWindowTitle(fname)
+			self.setWindowTitle(self.app_title.format(fname))
 			self.model.reset()
 			self.model.load_data(dataset)
+			self.chartwidget.add_graph("Initial", self.model, xcol=0, ycol=1)
 		else:
 			self.status.showMessage(f"No load data")
 	
@@ -218,16 +211,16 @@ def main():
 		ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 		app.setWindowIcon(QIcon(':/rc/Interdit.ico'))
 	
-	# Load example data to dataset
-	filename = os.path.abspath(args.path_to_dataset)
-	dataset = from_excel(
-		path=filename,
-		sheet_name='Лист6',
-		rangex='H7:H52',
-		rangey='I7:I52'
-	)
+	# # Load example data to dataset
+	# filename = os.path.abspath(args.path_to_dataset)
+	# dataset = from_excel(
+	# 	path=filename,
+	# 	sheet_name='Лист6',
+	# 	rangex='H7:H52',
+	# 	rangey='I7:I52'
+	# )
 	
-	magnetic = Magnetic(dataset, filename)
+	magnetic = Magnetic()
 	magnetic.centre()
 	magnetic.show()
 	
