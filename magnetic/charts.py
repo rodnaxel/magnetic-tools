@@ -55,6 +55,7 @@ class ChartWidget(QChartView):
 		self.models = {}
 
 	def setModel(self, name, model):
+		self.model = model
 		series = QtChart.QScatterSeries()
 		series.setName(name)
 		series.setMarkerSize(8)
@@ -67,14 +68,33 @@ class ChartWidget(QChartView):
 		self.mapper.setYColumn(1)
 		self.mapper.setModel(model)
 		self.mapper.setSeries(series)
-
+		
 		# TODO: Make different color
 		model.cell_color = "{}".format(series.color().name())
-
+		
 		self.series = series
-
+	
+	def add_graph(self):
+		series = QtChart.QScatterSeries()
+		series.setName("series2")
+		series.setMarkerSize(8)
+		self._chart.addSeries(series)
+		series.attachAxis(self.axis_x)
+		series.attachAxis(self.axis_y)
+		
+		self.mapper2 = QVXYModelMapper()
+		self.mapper2.setXColumn(2)
+		self.mapper2.setYColumn(3)
+		self.mapper2.setModel(self.model)
+		self.mapper2.setSeries(series)
+		
+		# TODO: Make different color
+		self.model.cell_color = "{}".format(series.color().name())
+		
+		self.series2 = series
+	
 	# self.chartarea = self._chart.ChartA
-
+	
 	def setAxis(self):
 		# Setting X-axis
 		self.axis_x = QtChart.QValueAxis()

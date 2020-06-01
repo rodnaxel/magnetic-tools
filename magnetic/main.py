@@ -142,14 +142,15 @@ class Magnetic(Ui):
 		self.model.reset()
 	
 	def calibrate(self):
-		dataset = self.model.fetch_data()
-		maxdub = Algorithm(dataset)
-		ds_correct = [maxdub.correct(x, y) for (x, y) in dataset]
-		print(f"\n{len(dataset)}, {dataset=}\n"
-		      f"{len(ds_correct)}, {ds_correct=}")
-		union_ = [(x, y, round(xc, 1), round(yc, 1)) for (x, y), (xc, yc) in zip(dataset, ds_correct)]
+		dataset_initial = self.model.fetch_data()
+		maxdub = Algorithm(dataset_initial)
+		dataset_correction = [maxdub.correct(x, y) for (x, y) in dataset_initial]
+		
+		union_ = [(x, y, round(xc, 1), round(yc, 1)) for (x, y), (xc, yc) in zip(dataset_initial, dataset_correction)]
 		self.model.reset()
 		self.model.load_data(union_)
+		
+		self.chartwidget.add_graph()
 	
 	def action_open(self):
 		fname, _ = QFileDialog.getOpenFileName(
