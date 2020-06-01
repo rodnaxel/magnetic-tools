@@ -1,5 +1,5 @@
 import threading
-from collections import deque
+from queue import Queue
 
 import serial
 
@@ -25,6 +25,8 @@ def fetch_dorient(message):
     return roll, pitch, course, magb, magc, magz
 
 
+sensor_buffer = Queue()
+
 class Sensor:
     SOP1 = bytes.fromhex("0d")
     SOP2 = bytes.fromhex("0a")
@@ -32,14 +34,14 @@ class Sensor:
     
     def __init__(self, bus):
         self.bus = bus
-        self.messages = deque(maxlen=1)
+        # self.messages = deque(maxlen=1)
     
     def revert(self):
         self.bus.write(bytes.fromhex("0d0a7e7201040c"))
-    
+
     def data(self):
-        print("data")
-        return self.messages
+        d = sensor_buffer.get()
+        return d
     
     def readany(self):
         """ This function used to read any message from sensor"""
@@ -77,8 +79,8 @@ class Sensor:
                     message += buf
                 else:
                     if pid == 112:
-                        self.messages.append(fetch_dorient(message))
-                    # finish = True
+                        data = fetch_dorient(message)
+                        sensor_buffer.put(data)
                     start = 0
                     message = b''
             else:
@@ -109,12 +111,8 @@ class Calibration:
             data = self.sensor.data()
             if not data:
                 continue
-            else:
-                data = data[-1]
-            
-            roll, pitch, heading, *fields, z = data
-            print(f"{heading=}")
-            self.dataset.append(fields)
+            roll, pitch, heading, hx, hy, hz = data
+            print(hx, hy)
     
     def compute(self):
         """TODO: This function used to compute deviation coefficients"""
