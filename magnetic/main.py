@@ -69,18 +69,20 @@ class Ui(QMainWindow):
 		self.label_y = QLabel("Hy:", centralWidget)
 		self.spin_y = QDoubleSpinBox(centralWidget)
 		self.spin_y.setMinimumWidth(100)
-
+		
 		self.buttons = {}
 		btn = QPushButton("Add", centralWidget)
 		self.buttons['add'] = btn
 		btn = QPushButton("Delete All", centralWidget)
 		self.buttons['delete_all'] = btn
-
+		btn = QPushButton("Calibrate", centralWidget)
+		self.buttons["calibrate"] = btn
+		
 		# Table
 		splitter = QSplitter(QtCore.Qt.Horizontal, centralWidget)
 		self.table = SensorDataTable(splitter)
 		splitter.addWidget(self.table)
-
+		
 		# Chart
 		self.chartwidget = ChartWidget()
 		size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -93,7 +95,7 @@ class Ui(QMainWindow):
 		# Layout
 		centralLayout = QVBoxLayout(centralWidget)
 		self.setCentralWidget(centralWidget)
-
+		
 		addLayout = QHBoxLayout()
 		addLayout.addWidget(self.label_x)
 		addLayout.addWidget(self.spin_x)
@@ -102,6 +104,7 @@ class Ui(QMainWindow):
 		addLayout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 		addLayout.addWidget(self.buttons['add'])
 		addLayout.addWidget(self.buttons['delete_all'])
+		addLayout.addWidget(self.buttons['calibrate'])
 		
 		centralLayout.addLayout(addLayout)
 		centralLayout.addWidget(splitter)
@@ -128,6 +131,7 @@ class Magnetic(Ui):
 		
 		self.buttons['add'].clicked.connect(self.add_xy)
 		self.buttons['delete_all'].clicked.connect(self.delete_all)
+		self.buttons['calibrate'].clicked.connect(self.calibrate)
 	
 	def add_xy(self):
 		x = self.spin_x.value()
@@ -138,7 +142,14 @@ class Magnetic(Ui):
 		self.model.reset()
 	
 	def calibrate(self):
-		pass
+		dataset = self.model.fetch_data()
+		maxdub = Algorithm(dataset)
+		ds_correct = [maxdub.correct(x, y) for (x, y) in dataset]
+		print(f"\n{len(dataset)}, {dataset=}\n"
+		      f"{len(ds_correct)}, {ds_correct=}")
+		union_ = [(x, y, round(xc, 1), round(yc, 1)) for (x, y), (xc, yc) in zip(dataset, ds_correct)]
+		self.model.reset()
+		self.model.load_data(union_)
 	
 	def action_open(self):
 		fname, _ = QFileDialog.getOpenFileName(

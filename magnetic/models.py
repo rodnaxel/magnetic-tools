@@ -1,3 +1,5 @@
+from builtins import super
+
 from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex
 from PyQt5.QtGui import QColor
 
@@ -5,7 +7,7 @@ from PyQt5.QtGui import QColor
 class SensorDataModel(QAbstractTableModel):
     """ The model represented sensor data (by dorient)"""
     # section_names = ("Hx", "Hy", "Hz", "Heading", "Roll", "Pitch")
-    section_names = ("Hx", "Hy")
+    section_names = ("Hx", "Hy", "Hxc", "Hyc")
     cols = len(section_names)
 
     def __init__(self, data: list = None):
