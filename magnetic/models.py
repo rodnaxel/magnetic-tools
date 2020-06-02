@@ -6,17 +6,17 @@ from PyQt5.QtGui import QColor
 
 class SensorDataModel(QAbstractTableModel):
     """ The model represented sensor data (by dorient)"""
-    # section_names = ("Hx", "Hy", "Hz", "Heading", "Roll", "Pitch")
-    section_names = ("Hx", "Hy", "Hxc", "Hyc")
+    section_names = ("Hx", "Hy", "Hz", "Heading", "Roll", "Pitch")
+    # section_names = ("Hx", "Hy", "Hxc", "Hyc")
     cols = len(section_names)
-
+    
     def __init__(self, data: list = None):
         super().__init__()
         self._data = data or []
-
+        
         self.cell_color = Qt.white
         self.cell_color2 = Qt.white
-
+    
     def load_data(self, data: list):
         self._data = data
         self.modelReset.emit()

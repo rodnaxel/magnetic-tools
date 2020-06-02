@@ -118,7 +118,7 @@ class MagneticViewer(Ui):
 		
 		self.model = SensorDataModel()
 		self.table.setModel(self.model)
-		self.chartwidget.setModel(self.model)
+		self.chartwidget.set_model(self.model)
 		# self.chartwidget.add_graph("Initial Magniude", xcol=0, ycol=1)
 		
 		self.buttons['add'].clicked.connect(self.add_xy)
@@ -130,6 +130,7 @@ class MagneticViewer(Ui):
 	
 	def delete_all(self):
 		self.model.reset()
+		self.chartwidget.clear_area()
 		self.setWindowTitle(self.app_title)
 	
 	def calibrate(self):

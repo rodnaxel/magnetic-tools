@@ -85,8 +85,8 @@ class Magnetic(Ui):
 		self.setupUi()
 		
 		self.model = SensorDataModel()
-		self.centralWidget().table.setModel(self.model)
-		self.centralWidget().chartwidget.setModel(self.model)
+		self.centralWidget().table.set_model(self.model)
+		self.centralWidget().chartwidget.set_model(self.model)
 
 
 def main():
