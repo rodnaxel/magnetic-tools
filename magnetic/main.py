@@ -83,9 +83,9 @@ class Magnetic(Ui):
 		# NOTE: uncomment for prototype ui
 		# uic.loadUi('./magnetic/ui/magnetic.ui', self)
 		self.setupUi()
-		
+
 		self.model = SensorDataModel()
-		self.centralWidget().table.set_model(self.model)
+		self.centralWidget().table.setModel(self.model)
 		self.centralWidget().chartwidget.set_model(self.model)
 
 

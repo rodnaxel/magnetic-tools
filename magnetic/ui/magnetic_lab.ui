@@ -4,361 +4,321 @@
  <widget class="QMainWindow" name="MainWindow">
   <property name="geometry">
    <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>876</width>
-    <height>668</height>
+       <x>0</x>
+       <y>0</y>
+       <width>897</width>
+       <height>665</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout_2">
-    <item>
-     <layout class="QVBoxLayout" name="verticalLayout_12">
-      <item>
-       <widget class="QGroupBox" name="groupBox">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="title">
-         <string>Port Settings:</string>
-        </property>
-        <layout class="QGridLayout" name="gridLayout">
-         <item row="1" column="1" colspan="2">
-          <widget class="QComboBox" name="comboBox_2">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="label_12">
-           <property name="text">
-            <string>Frequnce:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_10">
-           <property name="text">
-            <string>Port:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="label_11">
-           <property name="text">
-            <string>Baudrate:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1" colspan="2">
-          <widget class="QComboBox" name="comboBox_3">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="1">
-          <widget class="QPushButton" name="pushButton">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Find</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QComboBox" name="comboBox">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="sizeAdjustPolicy">
-            <enum>QComboBox::AdjustToContents</enum>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="groupBox_2">
-        <property name="title">
-         <string>Collect Rules:</string>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout_10">
-         <item>
-          <widget class="QPushButton" name="pushButton_2">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Start Collect</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="groupBox_4">
-        <property name="title">
-         <string>Filter Data:</string>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout_11">
-         <item>
-          <widget class="QPushButton" name="pushButton_3">
-           <property name="text">
-            <string>Filter</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="groupBox_5">
-        <property name="title">
-         <string>Calibration:</string>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout_16">
-         <item>
-          <widget class="QPushButton" name="pushButton_4">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Calibrate</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_5">
-           <property name="text">
-            <string>Reset</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <spacer name="verticalSpacer">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>20</width>
-          <height>40</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QVBoxLayout" name="verticalLayout_15">
-      <item>
-       <widget class="QGroupBox" name="groupBox_3">
-        <property name="title">
-         <string>Sensor Data:</string>
-        </property>
-        <layout class="QHBoxLayout" name="horizontalLayout">
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_9">
-           <item alignment="Qt::AlignHCenter">
-            <widget class="QLabel" name="label_9">
-             <property name="text">
-              <string>Roll:</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLCDNumber" name="lcdNumber_9"/>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout">
-           <item alignment="Qt::AlignHCenter">
-            <widget class="QLabel" name="label">
-             <property name="text">
-              <string>Pitch:</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLCDNumber" name="lcdNumber"/>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_2">
-           <item alignment="Qt::AlignHCenter">
-            <widget class="QLabel" name="label_2">
-             <property name="text">
-              <string>Heading:</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLCDNumber" name="lcdNumber_2"/>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_3">
-           <item alignment="Qt::AlignHCenter">
-            <widget class="QLabel" name="label_3">
-             <property name="text">
-              <string>B</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLCDNumber" name="lcdNumber_3"/>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_4">
-           <item alignment="Qt::AlignHCenter">
-            <widget class="QLabel" name="label_4">
-             <property name="text">
-              <string>C</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLCDNumber" name="lcdNumber_4"/>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_5">
-           <item alignment="Qt::AlignHCenter">
-            <widget class="QLabel" name="label_5">
-             <property name="text">
-              <string>Z</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLCDNumber" name="lcdNumber_5"/>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_6">
-           <item alignment="Qt::AlignHCenter">
-            <widget class="QLabel" name="label_6">
-             <property name="text">
-              <string>Bh</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLCDNumber" name="lcdNumber_6"/>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_7">
-           <item alignment="Qt::AlignHCenter">
-            <widget class="QLabel" name="label_7">
-             <property name="text">
-              <string>Ch</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLCDNumber" name="lcdNumber_7"/>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout_8">
-           <item alignment="Qt::AlignHCenter">
-            <widget class="QLabel" name="label_8">
-             <property name="text">
-              <string>Zh</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLCDNumber" name="lcdNumber_8"/>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QTabWidget" name="tabWidget">
-        <property name="currentIndex">
-         <number>0</number>
-        </property>
-        <widget class="QWidget" name="tab">
-         <attribute name="title">
-          <string>Data</string>
-         </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout_13">
+      <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,1">
           <item>
-           <widget class="QTableWidget" name="tableWidget"/>
+              <layout class="QHBoxLayout" name="toolbar_layout">
+                  <item>
+                      <widget class="QLabel" name="port_label">
+                          <property name="text">
+                              <string>Port:</string>
+                          </property>
+                      </widget>
+                  </item>
+                  <item>
+                      <widget class="QComboBox" name="portbox"/>
+                  </item>
+                  <item>
+                      <widget class="QLabel" name="freq_label">
+                          <property name="text">
+                              <string>Freq:</string>
+                          </property>
+                      </widget>
+                  </item>
+                  <item>
+                      <widget class="QComboBox" name="timeout_box"/>
+                  </item>
+                  <item>
+                      <spacer name="toolbar_spacer">
+                          <property name="orientation">
+                              <enum>Qt::Horizontal</enum>
+                          </property>
+                          <property name="sizeHint" stdset="0">
+                              <size>
+                                  <width>40</width>
+                                  <height>20</height>
+                              </size>
+                          </property>
+                      </spacer>
+                  </item>
+                  <item>
+                      <widget class="QPushButton" name="btnCalibrate">
+                          <property name="text">
+                              <string>Calibrate</string>
+                          </property>
+                      </widget>
+                  </item>
+                  <item>
+                      <widget class="QPushButton" name="btnCollection">
+                          <property name="text">
+                              <string>Collection</string>
+                          </property>
+                      </widget>
+                  </item>
+              </layout>
           </item>
-         </layout>
-        </widget>
-        <widget class="QWidget" name="tab_2">
-         <attribute name="title">
-          <string>Graph</string>
-         </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout_14">
           <item>
-           <widget class="QGraphicsView" name="graphicsView"/>
-          </item>
-         </layout>
-        </widget>
-       </widget>
-      </item>
-     </layout>
+              <widget class="QSplitter" name="splitter">
+                  <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                  </property>
+                  <widget class="QWidget" name="left_wgt" native="true">
+                      <layout class="QVBoxLayout" name="verticalLayout">
+                          <item>
+                              <widget class="QGroupBox" name="sensor_data_box">
+                                  <property name="title">
+                                      <string>Sensor Data:</string>
+                                  </property>
+                                  <layout class="QGridLayout" name="gridLayout">
+                                      <item row="0" column="0">
+                                          <widget class="QLabel" name="label_2">
+                                              <property name="text">
+                                                  <string>Roll:</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="0" column="1">
+                                          <widget class="QLabel" name="roll_display">
+                                              <property name="layoutDirection">
+                                                  <enum>Qt::LeftToRight</enum>
+                                              </property>
+                                              <property name="frameShape">
+                                                  <enum>QFrame::StyledPanel</enum>
+                                              </property>
+                                              <property name="text">
+                                                  <string>TextLabel</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="1" column="0">
+                                          <widget class="QLabel" name="label_3">
+                                              <property name="text">
+                                                  <string>Pitch:</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="1" column="1">
+                                          <widget class="QLabel" name="pitch_display">
+                                              <property name="layoutDirection">
+                                                  <enum>Qt::LeftToRight</enum>
+                                              </property>
+                                              <property name="frameShape">
+                                                  <enum>QFrame::StyledPanel</enum>
+                                              </property>
+                                              <property name="text">
+                                                  <string>TextLabel</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="2" column="0">
+                                          <widget class="QLabel" name="label_5">
+                                              <property name="text">
+                                                  <string>Heading:</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="2" column="1">
+                                          <widget class="QLabel" name="heading_display">
+                                              <property name="layoutDirection">
+                                                  <enum>Qt::LeftToRight</enum>
+                                              </property>
+                                              <property name="frameShape">
+                                                  <enum>QFrame::StyledPanel</enum>
+                                              </property>
+                                              <property name="text">
+                                                  <string>TextLabel</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="3" column="0">
+                                          <widget class="QLabel" name="label_7">
+                                              <property name="text">
+                                                  <string>Hx:</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="3" column="1">
+                                          <widget class="QLabel" name="hx_display">
+                                              <property name="layoutDirection">
+                                                  <enum>Qt::LeftToRight</enum>
+                                              </property>
+                                              <property name="frameShape">
+                                                  <enum>QFrame::StyledPanel</enum>
+                                              </property>
+                                              <property name="text">
+                                                  <string>TextLabel</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="4" column="0">
+                                          <widget class="QLabel" name="label_10">
+                                              <property name="text">
+                                                  <string>Hy:</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="4" column="1">
+                                          <widget class="QLabel" name="hy_display">
+                                              <property name="layoutDirection">
+                                                  <enum>Qt::LeftToRight</enum>
+                                              </property>
+                                              <property name="frameShape">
+                                                  <enum>QFrame::StyledPanel</enum>
+                                              </property>
+                                              <property name="text">
+                                                  <string>TextLabel</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="5" column="0">
+                                          <widget class="QLabel" name="label_9">
+                                              <property name="text">
+                                                  <string>Hz:</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="5" column="1">
+                                          <widget class="QLabel" name="hz_display">
+                                              <property name="layoutDirection">
+                                                  <enum>Qt::LeftToRight</enum>
+                                              </property>
+                                              <property name="frameShape">
+                                                  <enum>QFrame::StyledPanel</enum>
+                                              </property>
+                                              <property name="text">
+                                                  <string>TextLabel</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="6" column="0">
+                                          <widget class="QLabel" name="label_13">
+                                              <property name="text">
+                                                  <string>Hxh:</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="6" column="1">
+                                          <widget class="QLabel" name="hxh_display">
+                                              <property name="layoutDirection">
+                                                  <enum>Qt::LeftToRight</enum>
+                                              </property>
+                                              <property name="frameShape">
+                                                  <enum>QFrame::StyledPanel</enum>
+                                              </property>
+                                              <property name="text">
+                                                  <string>TextLabel</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="7" column="0">
+                                          <widget class="QLabel" name="label_14">
+                                              <property name="text">
+                                                  <string>Hyh:</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="7" column="1">
+                                          <widget class="QLabel" name="hyh_display">
+                                              <property name="layoutDirection">
+                                                  <enum>Qt::LeftToRight</enum>
+                                              </property>
+                                              <property name="frameShape">
+                                                  <enum>QFrame::StyledPanel</enum>
+                                              </property>
+                                              <property name="text">
+                                                  <string>TextLabel</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="8" column="0">
+                                          <widget class="QLabel" name="label_17">
+                                              <property name="text">
+                                                  <string>Hzh:</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                      <item row="8" column="1">
+                                          <widget class="QLabel" name="hzh_display">
+                                              <property name="layoutDirection">
+                                                  <enum>Qt::LeftToRight</enum>
+                                              </property>
+                                              <property name="frameShape">
+                                                  <enum>QFrame::StyledPanel</enum>
+                                              </property>
+                                              <property name="text">
+                                                  <string>TextLabel</string>
+                                              </property>
+                                          </widget>
+                                      </item>
+                                  </layout>
+                              </widget>
+                          </item>
+                          <item>
+                              <widget class="QTableView" name="sensor_data_view"/>
+                          </item>
+                          <item>
+                              <widget class="QPushButton" name="btnClear">
+                                  <property name="text">
+                                      <string>Clear</string>
+                                  </property>
+                              </widget>
+                          </item>
+                      </layout>
+                  </widget>
+                  <widget class="QWidget" name="rigth_wgt" native="true">
+                      <layout class="QVBoxLayout" name="verticalLayout_2">
+                          <item>
+                              <layout class="QHBoxLayout" name="param_layout">
+                                  <item>
+                                      <widget class="QLabel" name="label_type_chart">
+                                          <property name="text">
+                                              <string>Type Chart</string>
+                                          </property>
+                                      </widget>
+                                  </item>
+                                  <item>
+                                      <spacer name="horizontalSpacer_2">
+                                          <property name="orientation">
+                                              <enum>Qt::Horizontal</enum>
+                                          </property>
+                                          <property name="sizeHint" stdset="0">
+                                              <size>
+                                                  <width>40</width>
+                                                  <height>20</height>
+                                              </size>
+                                          </property>
+                                      </spacer>
+                                  </item>
+                                  <item>
+                                      <widget class="QComboBox" name="type_chart"/>
+                                  </item>
+                              </layout>
+                          </item>
+                          <item>
+                              <widget class="QGraphicsView" name="sensor_data_chart"/>
+                          </item>
+                          <item>
+                              <widget class="QScrollBar" name="chart_scroll">
+                                  <property name="layoutDirection">
+                                      <enum>Qt::LeftToRight</enum>
+                                  </property>
+                                  <property name="orientation">
+                                      <enum>Qt::Horizontal</enum>
+                                  </property>
+                              </widget>
+                          </item>
+                      </layout>
+                  </widget>
+              </widget>
     </item>
    </layout>
   </widget>
@@ -367,7 +327,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>876</width>
+        <width>897</width>
      <height>20</height>
     </rect>
    </property>
