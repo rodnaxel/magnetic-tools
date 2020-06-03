@@ -1,4 +1,5 @@
 import threading
+import time
 from queue import Queue
 
 import serial
@@ -28,24 +29,25 @@ def fetch_dorient(message):
 sensor_buffer = Queue(maxsize=1)
 
 
-class Sensor:
+class SensorDriver:
 	SOP1 = bytes.fromhex("0d")
 	SOP2 = bytes.fromhex("0a")
 	SOP3 = bytes.fromhex("7e")
 	
 	def __init__(self, bus):
 		self.bus = bus
-	
-	# self.messages = deque(maxlen=1)
+		self._running = True
 	
 	def revert(self):
 		self.bus.write(bytes.fromhex("0d0a7e7201040c"))
 	
-	def data(self):
-		d = sensor_buffer.get()
-		return d
+	def recieve(self):
+		return sensor_buffer.get()
 	
-	def readany(self):
+	def stop(self):
+		self._running = False
+	
+	def run(self):
 		""" This function used to read any message from sensor"""
 		print('Start readany')
 		message = b''
@@ -53,8 +55,11 @@ class Sensor:
 		pid = 0
 		size = 0
 		
-		while True:
-			buf = self.bus.read(1)
+		while self._running:
+			try:
+				buf = self.bus.read(1)
+			except serial.SerialException:
+				sensor_buffer.put(object())
 			if start == 0:
 				if buf == self.SOP1:
 					start += 1
@@ -89,49 +94,22 @@ class Sensor:
 				print("Error: sensor.readany(): ")
 
 
-class Calibration:
-	def __init__(self, bus):
-		self.sensor = Sensor(bus)
-		self.dataset = []
-		self.finish = False
-	
-	def start(self):
-		self.data_collection()
-	
-	def stop(self):
-		self.finish = True
-	
-	def data_collection(self):
-		self.sensor.revert()
-		
-		# TODO: <1> Make algoritm finish data collection
-		# TODO: <2> Run sensor.readany() in separate thread and then get data by Timer
-		thread = threading.Thread(target=self.sensor.readany, daemon=True)
-		thread.start()
-		
-		while not self.finish:
-			data = self.sensor.data()
-			if not data:
-				continue
-			roll, pitch, heading, hx, hy, hz = data
-			print(hx, hy)
-	
-	def compute(self):
-		"""TODO: This function used to compute deviation coefficients"""
-
-
 def debug():
 	serobj = serial.Serial("/dev/ttyUSB0", timeout=0.1)
-	cal = Calibration(serobj)
+	sensor = SensorDriver(serobj)
+	
+	#
+	t = threading.Thread(target=sensor.run)
+	t.start()
 	
 	try:
-		cal.data_collection()
+		while True:
+			data = sensor.recieve()
+			print(data)
+			time.sleep(0.1)
 	except KeyboardInterrupt as e:
-		cal.stop()
+		sensor.stop()
 		serobj.close()
-
-
-# plot(cal.dataset)
 
 
 if __name__ == "__main__":
