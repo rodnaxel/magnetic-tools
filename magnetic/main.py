@@ -4,9 +4,6 @@ from PyQt5 import QtCore
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from magnetic.charts import ChartWidget
-from magnetic.magnetic_viewer import SensorDataTable
-from magnetic.models import SensorDataModel
 from magnetic.util import get_arguments
 
 
@@ -14,57 +11,62 @@ class MagneticWidget(QWidget):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		
-		self.deviation_ratio = {}
-		parameterbar = QHBoxLayout()
-		for name in ('Bias Hx', 'Bias Hy', 'Phi', 'k'):
-			label = QLabel(name + ":", self)
-			spin = QDoubleSpinBox(self)
-			spin.setReadOnly(True)
-			parameterbar.addWidget(label)
-			parameterbar.addWidget(spin)
-			self.deviation_ratio[name] = spin
-		
-		parameterbar.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+		# View Port
+		self.sensor_data = {}
+		gbox = QGroupBox("Sensor Data:")
+		gbox_layout = QFormLayout(gbox)
+		for name in ('pitch', 'roll', 'heading', 'hx', 'hy', 'hz', 'hxc', 'hyc', 'hyz'):
+			label = QLabel("-----")
+			label.setAlignment(QtCore.Qt.AlignRight)
+			label.setFrameShape(QFrame.StyledPanel)
+			gbox_layout.addRow(QLabel(name.capitalize() + ":"), label)
+			self.sensor_data[name] = label
 		
 		self.buttons = {}
-		for name in ("add", "clear", "calibrate"):
+		for name in ("collection",):
 			btn = QPushButton(name.capitalize(), self)
-			parameterbar.addWidget(btn)
 			self.buttons[name] = btn
-		
-		# Table
-		splitter = QSplitter(QtCore.Qt.Horizontal, self)
-		self.table = SensorDataTable(splitter)
-		splitter.addWidget(self.table)
-		
-		# Chart
-		self.chartwidget = ChartWidget()
-		size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-		size_policy.setHorizontalStretch(1)
-		size_policy.setVerticalStretch(0)
-		size_policy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-		self.chartwidget.setSizePolicy(size_policy)
-		self.chartwidget.setMaximumWidth(self.chartwidget.maximumHeight())
-		splitter.addWidget(self.chartwidget)
 		
 		# Layout
 		centralLayout = QVBoxLayout(self)
-		
-		centralLayout.addLayout(parameterbar)
-		centralLayout.addWidget(splitter)
+		centralLayout.addWidget(gbox)
+		centralLayout.addWidget(self.buttons['collection'])
 
 
 class Ui(QMainWindow):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
+		self.collection_start = False
 	
 	def setupUi(self):
 		self.setWindowTitle(f"Magnetic Lab")
 		self.setMinimumSize(800, 600)
 		
 		centralWidget = MagneticWidget(self)
-		
 		self.setCentralWidget(centralWidget)
+		
+		self.buttons = self.centralWidget().buttons
+		self.sensor_data = self.centralWidget().sensor_data
+		
+		# Connect Signal/Slot
+		self.buttons["collection"].clicked.connect(self.on_collection)
+	
+	def timerEvent(self, QTimerEvent):
+		""" Handler timer event"""
+		print(QtCore.QTime().currentTime().toString())
+	
+	def on_collection(self):
+		print("onCollection()...")
+		self.collection_start = ~self.collection_start
+		self.buttons["collection"].setDown(self.collection_start)
+		if self.collection_start:
+			self.buttons["collection"].setText("Collection stop")
+			self.timer_recieve = self.startTimer(100, timerType=QtCore.Qt.PreciseTimer)
+		else:
+			self.buttons["collection"].setText("Collection start")
+			if self.timer_recieve:
+				self.killTimer(self.timer_recieve)
+				self.timer_recieve = None
 	
 	def centre(self):
 		""" This method aligned main window related center screen """
@@ -81,12 +83,12 @@ class Magnetic(Ui):
 	def __init__(self, data=None, title=None, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		# NOTE: uncomment for prototype ui
-		# uic.loadUi('./magnetic/ui/magnetic.ui', self)
+		# uic.loadUi('../magnetic/ui/magnetic_lab.ui', self)
 		self.setupUi()
-
-		self.model = SensorDataModel()
-		self.centralWidget().table.setModel(self.model)
-		self.centralWidget().chartwidget.set_model(self.model)
+	
+	# self.model = SensorDataModel()
+	# self.centralWidget().table.setModel(self.model)
+	# self.centralWidget().chartwidget.set_model(self.model)
 
 
 def main():

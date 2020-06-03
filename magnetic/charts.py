@@ -85,6 +85,12 @@ class ChartWidget(QChartView):
 	
 	def clear_area(self):
 		self._chart.removeAllSeries()
+	
+	def mouseMoveEvent(self, event):
+		super().mouseMoveEvent(event)
+		x = self._chart.mapToValue(event.pos()).x()
+		y = self._chart.mapToValue(event.pos()).y()
+		print(f"{x=}, {y=}")
 
 
 class MatplotlibChart:
