@@ -28,7 +28,6 @@ def fetch_dorient(message):
 
 sensor_buffer = Queue(maxsize=1)
 
-
 class SensorDriver:
 	SOP1 = bytes.fromhex("0d")
 	SOP2 = bytes.fromhex("0a")

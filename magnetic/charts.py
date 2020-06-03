@@ -21,13 +21,13 @@ class ScatterChart(QChart):
 		self.axis_x.setTickCount(11)
 		self.axis_x.setLabelFormat("%.1f")
 		self.axis_x.setTitleText(self.labelx)
-		self.axis_x.setRange(-25, 25)
+		self.axis_x.setRange(-35, 35)
 		self.addAxis(self.axis_x, QtCore.Qt.AlignBottom)
 		
 		# Setting Y-axis
 		self.axis_y = QtChart.QValueAxis()
 		self.axis_y.setTickCount(11)
-		self.axis_y.setRange(-25, 25)
+		self.axis_y.setRange(-35, 35)
 		self.axis_y.setLabelFormat("%.1f")
 		self.axis_y.setTitleText(self.labely)
 		self.addAxis(self.axis_y, QtCore.Qt.AlignLeft)
@@ -90,7 +90,6 @@ class ChartWidget(QChartView):
 		super().mouseMoveEvent(event)
 		x = self._chart.mapToValue(event.pos()).x()
 		y = self._chart.mapToValue(event.pos()).y()
-		print(f"{x=}, {y=}")
 
 
 class MatplotlibChart:
