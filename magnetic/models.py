@@ -13,10 +13,10 @@ class SensorDataModel(QAbstractTableModel):
     def __init__(self, data: list = None):
         super().__init__()
         self._data = data or []
-        
+
         self.cell_color = Qt.white
         self.cell_color2 = Qt.white
-    
+
     def load_data(self, data: list):
         self._data = data
         self.modelReset.emit()
@@ -24,10 +24,10 @@ class SensorDataModel(QAbstractTableModel):
     def fetch_data(self):
         return self._data
 
-    def append_item(self, bx: float, by: float):
-        r = len(self._data)
+    def append_data(self, values):
+        r = self.rowCount()
         self.beginInsertRows(QModelIndex(), r, r)
-        self._data.append((bx, by))
+        self._data.append(values)
         self.endInsertRows()
 
     def rowCount(self, parent=None, *args, **kwargs):

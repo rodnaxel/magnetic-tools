@@ -27,36 +27,53 @@ class MagneticWidget(QDialog):
 			label.setFrameShape(QFrame.StyledPanel)
 			gbox_layout.addRow(QLabel(name.capitalize() + ":"), label)
 			self.sensor_data[name] = label
-
+		
+		# Control
 		self.buttons = {}
 		for name in ("collection",):
 			btn = QPushButton(name.capitalize(), self)
 			self.buttons[name] = btn
-
+		
 		left_layout = QVBoxLayout()
 		left_layout.addWidget(gbox)
 		left_layout.addWidget(self.buttons['collection'])
 		left_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Expanding))
-
+		
 		# Table/Graph View
-		splitter = QSplitter(QtCore.Qt.Vertical, self)
-		self.table = SensorDataTable(splitter)
-		splitter.addWidget(self.table)
-
-		self.chartwidget = ChartWidget()
+		right_layout = QVBoxLayout()
+		
+		# ...Top chartbar
+		chart_label = QLabel("Type Chart:", self)
+		self.chart_box = QComboBox(self)
+		self.chart_box.addItems(("Graph", "Table"))
+		
+		chartbar_layout = QHBoxLayout()
+		chartbar_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Expanding))
+		chartbar_layout.addWidget(chart_label)
+		chartbar_layout.addWidget(self.chart_box)
+		
+		# ...Chart / Table
+		self.stack = stack_layout = QStackedLayout()
+		
+		self.chart_view = ChartWidget(self)
 		size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 		size_policy.setHorizontalStretch(1)
 		size_policy.setVerticalStretch(0)
 		size_policy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-		self.chartwidget.setSizePolicy(size_policy)
-		self.chartwidget.setMaximumWidth(self.chartwidget.maximumHeight())
-		splitter.addWidget(self.chartwidget)
-
-		# Layout
-
+		self.chart_view.setSizePolicy(size_policy)
+		self.chart_view.setMaximumWidth(self.chart_view.maximumHeight())
+		stack_layout.addWidget(self.chart_view)
+		
+		self.table_view = SensorDataTable(self)
+		stack_layout.addWidget(self.table_view)
+		
+		right_layout.addLayout(chartbar_layout)
+		right_layout.addLayout(stack_layout, 2)
+		
+		# Central Layout
 		centralLayout = QHBoxLayout(self)
 		centralLayout.addLayout(left_layout)
-		centralLayout.addWidget(splitter)
+		centralLayout.addLayout(right_layout)
 
 
 class Ui(QMainWindow):
@@ -67,12 +84,14 @@ class Ui(QMainWindow):
 	def setupUi(self):
 		self.setWindowTitle(f"Magnetic Lab")
 		self.setMinimumSize(100, 600)
-
+		
 		central_widget = MagneticWidget(self)
 		self.setCentralWidget(central_widget)
-
+		
 		self.buttons = self.centralWidget().buttons
 		self.sensor_data = self.centralWidget().sensor_data
+		self.chart_box = self.centralWidget().chart_box
+		self.stack = self.centralWidget().stack
 	
 	def centre(self):
 		""" This method aligned main window related center screen """
@@ -93,20 +112,27 @@ class Magnetic(Ui):
 		# NOTE: uncomment for prototype ui
 		# uic.loadUi('../magnetic/ui/magnetic_lab.ui', self)
 		self.setupUi()
-
+		
 		serobj = serial.Serial("/dev/ttyUSB0", timeout=0.1)
 		self.sensor = sensor.SensorDriver(serobj)
-
+		
 		t = threading.Thread(target=self.sensor.run, daemon=True)
 		t.start()
-
+		
 		self.model = SensorDataModel()
-		self.centralWidget().table.setModel(self.model)
-		self.centralWidget().chartwidget.set_model(self.model)
-		self.centralWidget().chartwidget.add_graph("Initial Magniude", self.model, xcol=0, ycol=1)
-
+		self.centralWidget().table_view.setModel(self.model)
+		self.centralWidget().chart_view.set_model(self.model)
+		self.centralWidget().chart_view.add_graph("Initial Magniude", self.model, xcol=0, ycol=1)
+		
 		# Connect Signal/Slot
 		self.buttons["collection"].clicked.connect(self.on_collection)
+		self.chart_box.currentTextChanged[str].connect(self.switch_view)
+	
+	def switch_view(self, s):
+		if s == "Graph":
+			self.stack.setCurrentIndex(0)
+		elif s == "Table":
+			self.stack.setCurrentIndex(1)
 	
 	def timerEvent(self, QTimerEvent):
 		""" Handler timer event"""
@@ -119,7 +145,7 @@ class Magnetic(Ui):
 			return
 
 		r, p, h, hx, hy, hz = data
-
+		
 		fmt = '{0:.2f}'
 		self.sensor_data['roll'].setText(fmt.format(r))
 		self.sensor_data['pitch'].setText(fmt.format(p))
@@ -129,9 +155,10 @@ class Magnetic(Ui):
 		self.sensor_data['hz'].setText(fmt.format(hz))
 		self.sensor_data['hzc'].setText(fmt.format(count))
 		count += 1
-
-		self.model.append_item(round(hx, 1), round(hy, 1))
-
+		
+		data = (round(hx, 1), round(hy, 1))
+		self.model.append_data(data)
+		
 		print(f"{time}: {data}")
 	
 	def on_collection(self):
