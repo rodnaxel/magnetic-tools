@@ -7,7 +7,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from magnetic import sensor
-from magnetic.charts import ChartWidget
+from magnetic.charts import EllipsoidGraph
 from magnetic.magnetic_viewer import SensorDataTable
 from magnetic.models import SensorDataModel
 from magnetic.util import get_arguments
@@ -16,20 +16,20 @@ from magnetic.util import get_arguments
 class MagneticWidget(QDialog):
 	def __init__(self, parent, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		
+
 		# Data View
 		self.data_view = {}
 		gbox = QGroupBox("Sensor Data:")
 		gbox_layout = QFormLayout(gbox)
-		for name in ('count', 'pitch', 'roll', 'heading', 'hx', 'hy', 'hz', 'hxc', 'hyc', 'hzc'):
+		for name in ('samples', 'pitch', 'roll', 'heading', 'hx', 'hy', 'hz', 'hxc', 'hyc', 'hzc'):
 			label = QLabel("-----")
 			label.setAlignment(QtCore.Qt.AlignRight)
 			label.setMinimumWidth(100)
 			label.setStyleSheet("QLabel {font: 16px}")
-			label.setFrameShape(QFrame.StyledPanel)
+			# label.setFrameShape(QFrame.StyledPanel)
 			gbox_layout.addRow(QLabel(name.capitalize() + ":"), label)
 			self.data_view[name] = label
-		
+
 		# Control
 		self.buttons = {}
 		for name in ("connect", "collection", "clear"):
@@ -51,16 +51,16 @@ class MagneticWidget(QDialog):
 		chart_label = QLabel("Type Chart:", self)
 		self.chart_box = QComboBox(self)
 		self.chart_box.addItems(("Graph", "Table"))
-		
+
 		chartbar_layout = QHBoxLayout()
 		chartbar_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Expanding))
 		chartbar_layout.addWidget(chart_label)
 		chartbar_layout.addWidget(self.chart_box)
-		
+
 		# ...Chart / Table
 		self.stack = stack_layout = QStackedLayout()
-		
-		self.chart_view = ChartWidget(self)
+
+		self.chart_view = EllipsoidGraph(self)
 		size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 		size_policy.setHorizontalStretch(1)
 		size_policy.setVerticalStretch(0)
@@ -68,7 +68,7 @@ class MagneticWidget(QDialog):
 		self.chart_view.setSizePolicy(size_policy)
 		self.chart_view.setMaximumWidth(self.chart_view.maximumHeight())
 		stack_layout.addWidget(self.chart_view)
-		
+
 		self.table_view = SensorDataTable(self)
 		stack_layout.addWidget(self.table_view)
 		
@@ -130,39 +130,42 @@ class Magnetic(Ui):
 		self.sensor = sensor.SensorDriver(serobj)
 		t = threading.Thread(target=self.sensor.run, daemon=True)
 		t.start()
-		
+
 		# Model
 		self.model = SensorDataModel()
 		self.centralWidget().table_view.setModel(self.model)
 		self.centralWidget().chart_view.set_model(self.model)
-		
+
 		# Connect Signal/Slot
 		self.buttons["connect"].clicked.connect(self.on_connect)
 		self.buttons["clear"].clicked.connect(self.on_clear)
-	
+
+		self.model.rowsInserted.connect(self.centralWidget().chart_view.redraw)
+
+	def test(self):
+		print("Updata")
+
 	def timerEvent(self, QTimerEvent):
 		""" Handler timer event"""
 		# time = QtCore.QTime().currentTime().toString()
 		data = [round(item, 1) for item in sensor.sensor_buffer.get()]
 		r, p, h, hx, hy, hz = data
-		
+
 		# <1> Insert row values to model
 		self.model.append_data((hx, hy, hz, h, r, p))
-		
+
 		# <2> Set values to data view
-		
+
 		fmt_value = '{0:.1f}'
-		
-		import math
-		self.data_view['count'].setText("{}".format(self.model.rowCount()))
+
+		self.data_view['samples'].setText("{}".format(self.model.rowCount()))
 		self.data_view['roll'].setText(fmt_value.format(r))
 		self.data_view['pitch'].setText(fmt_value.format(p))
 		self.data_view['heading'].setText(fmt_value.format(h))
 		self.data_view['hx'].setText(fmt_value.format(hx))
 		self.data_view['hy'].setText(fmt_value.format(hy))
 		self.data_view['hz'].setText(fmt_value.format(hz))
-		self.data_view['hzc'].setText(fmt_value.format(math.atan(hy / hx)))
-	
+
 	def on_clear(self):
 		self.model.reset()
 		self.centralWidget().chart_view.clear_area()
@@ -182,9 +185,9 @@ class Magnetic(Ui):
 			if self.timer_recieve:
 				self.killTimer(self.timer_recieve)
 				self.timer_recieve = None
-	
+
 	def stop(self):
-		self.buttons["collection"].setText("Stop")
+		self.buttons["connect"].setText("Stop")
 		if self.timer_recieve:
 			self.killTimer(self.timer_recieve)
 			self.timer_recieve = None

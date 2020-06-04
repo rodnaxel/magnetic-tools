@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QTableView, QHeaderView, QMainWindow, QWidget, QActi
 	QSpacerItem, QSizePolicy, QPushButton, QSplitter, QVBoxLayout, QFileDialog, QApplication
 
 from magnetic.algorithms import Algorithm
-from magnetic.charts import ChartWidget
+from magnetic.charts import EllipsoidGraph
 from magnetic.models import SensorDataModel
 from magnetic.util import from_csv, to_csv, get_arguments
 
@@ -75,14 +75,14 @@ class Ui(QMainWindow):
 			btn = QPushButton(name.capitalize(), centralWidget)
 			parameterbar.addWidget(btn)
 			self.buttons[name] = btn
-		
+
 		# Table
 		splitter = QSplitter(QtCore.Qt.Horizontal, centralWidget)
 		self.table = SensorDataTable(splitter)
 		splitter.addWidget(self.table)
-		
+
 		# Chart
-		self.chartwidget = ChartWidget()
+		self.chartwidget = EllipsoidGraph()
 		size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 		size_policy.setHorizontalStretch(1)
 		size_policy.setVerticalStretch(0)
@@ -90,7 +90,7 @@ class Ui(QMainWindow):
 		self.chartwidget.setSizePolicy(size_policy)
 		self.chartwidget.setMaximumWidth(self.chartwidget.maximumHeight())
 		splitter.addWidget(self.chartwidget)
-		
+
 		# Layout
 		centralLayout = QVBoxLayout(centralWidget)
 		self.setCentralWidget(centralWidget)
