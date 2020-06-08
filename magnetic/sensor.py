@@ -15,15 +15,18 @@ def gauss2tesla(gauss):
 
 def fetch_dorient(message):
 	fields = [message[2 * i: 2 * (i + 1)] for i in range(9)]
-	
+
 	roll = kang2dec(fields[0])
 	pitch = kang2dec(fields[1])
-	course = kang2dec(fields[2], signed=False)
+	heading = kang2dec(fields[2], signed=False)
+	magb_raw = gauss2tesla(fields[3])
+	magc_raw = gauss2tesla(fields[4])
+	magz_raw = gauss2tesla(fields[5])
 	magb = gauss2tesla(fields[6])
 	magc = gauss2tesla(fields[7])
 	magz = gauss2tesla(fields[8])
-	
-	return roll, pitch, course, magb, magc, magz
+
+	return roll, pitch, heading, magb_raw, magc_raw, magz_raw, magb, magc, magz
 
 
 sensor_buffer = Queue(maxsize=1)
@@ -36,7 +39,7 @@ class SensorDriver:
 	def __init__(self, bus):
 		self.bus = bus
 		self._running = True
-	
+
 	def revert(self):
 		self.bus.write(bytes.fromhex("0d0a7e7201040c"))
 	

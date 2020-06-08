@@ -7,6 +7,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from magnetic import sensor
+from magnetic.algorithms import to_horizont
 from magnetic.charts import EllipsoidGraph
 from magnetic.magnetic_viewer import SensorDataTable
 from magnetic.models import SensorDataModel
@@ -21,34 +22,45 @@ class MagneticWidget(QDialog):
 		self.data_view = {}
 		gbox = QGroupBox("Sensor Data:")
 		gbox_layout = QFormLayout(gbox)
-		for name in ('samples', 'pitch', 'roll', 'heading', 'hx', 'hy', 'hz', 'hxc', 'hyc', 'hzc'):
-			label = QLabel("-----")
-			label.setAlignment(QtCore.Qt.AlignRight)
-			label.setMinimumWidth(100)
-			label.setStyleSheet("QLabel {font: 16px}")
-			# label.setFrameShape(QFrame.StyledPanel)
+		for name in ('samples', 'pitch', 'roll', 'heading', 'hxr', 'hyr', 'hzr', 'hx', 'hy', 'hz'):
+			label = QLabel("None")
+			label.setAlignment(QtCore.Qt.AlignCenter)
+			label.setMinimumWidth(80)
+			label.setStyleSheet("QLabel {font: 16px; background-color: white}")
+			label.setFrameShape(QFrame.StyledPanel)
+
 			gbox_layout.addRow(QLabel(name.capitalize() + ":"), label)
 			self.data_view[name] = label
+
+		self.options = {}
+		option_box = QGroupBox("Select option:")
+		option_layout = QHBoxLayout(option_box)
+		for name in ("dub horizont",):
+			check = QCheckBox(name)
+			check.setCheckState(False)
+			option_layout.addWidget(check)
+			self.options[name] = check
 
 		# Control
 		self.buttons = {}
 		for name in ("connect", "collection", "clear"):
 			btn = QPushButton(name.capitalize(), self)
 			self.buttons[name] = btn
-		
+
 		left_layout = QVBoxLayout()
 		left_layout.setContentsMargins(10, 20, 10, 10)
 		left_layout.addWidget(gbox)
-		
+		left_layout.addWidget(option_box)
+
 		for btn in self.buttons.values():
 			left_layout.addWidget(btn)
 		left_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Expanding))
-		
+
 		# Table/Graph View
 		right_layout = QVBoxLayout()
-		
+
 		# ...Top chartbar
-		chart_label = QLabel("Type Chart:", self)
+		chart_label = QLabel("Show as:", self)
 		self.chart_box = QComboBox(self)
 		self.chart_box.addItems(("Graph", "Table"))
 
@@ -97,15 +109,16 @@ class Ui(QMainWindow):
 	def setupUi(self):
 		self.setWindowTitle(f"Magnetic Lab")
 		self.setMinimumSize(100, 600)
-		
+
 		central_widget = MagneticWidget(self)
 		self.setCentralWidget(central_widget)
-		
+
 		self.status = self.statusBar()
-		
+
 		self.buttons = self.centralWidget().buttons
 		self.data_view = self.centralWidget().data_view
-	
+		self.options = self.centralWidget().options
+
 	def centre(self):
 		""" This method aligned main window related center screen """
 		frame_gm = self.frameGeometry()
@@ -149,19 +162,27 @@ class Magnetic(Ui):
 		""" Handler timer event"""
 		# time = QtCore.QTime().currentTime().toString()
 		data = [round(item, 1) for item in sensor.sensor_buffer.get()]
-		r, p, h, hx, hy, hz = data
+		r, p, h, hx_raw, hy_raw, hz_raw, hx, hy, hz = data
+
+		if self.options['dub horizont'].checkState():
+			hx_raw, hy_raw, hz_raw = to_horizont(hx_raw, hy_raw, hz_raw, r, p)
 
 		# <1> Insert row values to model
-		self.model.append_data((hx, hy, hz, h, r, p))
+		self.model.append_data((hx, hy, hz, hx_raw, hy_raw, hz_raw, h, r, p))
 
 		# <2> Set values to data view
-
 		fmt_value = '{0:.1f}'
 
 		self.data_view['samples'].setText("{}".format(self.model.rowCount()))
+
 		self.data_view['roll'].setText(fmt_value.format(r))
 		self.data_view['pitch'].setText(fmt_value.format(p))
 		self.data_view['heading'].setText(fmt_value.format(h))
+
+		self.data_view['hxr'].setText(fmt_value.format(hx_raw))
+		self.data_view['hyr'].setText(fmt_value.format(hy_raw))
+		self.data_view['hzr'].setText(fmt_value.format(hz_raw))
+
 		self.data_view['hx'].setText(fmt_value.format(hx))
 		self.data_view['hy'].setText(fmt_value.format(hy))
 		self.data_view['hz'].setText(fmt_value.format(hz))
