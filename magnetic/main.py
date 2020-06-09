@@ -162,10 +162,10 @@ class Magnetic(Ui):
 		""" Handler timer event"""
 		# time = QtCore.QTime().currentTime().toString()
 		data = [round(item, 1) for item in sensor.sensor_buffer.get()]
-		r, p, h, hx_raw, hy_raw, hz_raw, hx, hy, hz = data
+		r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz = data
 
 		if self.options['dub horizont'].checkState():
-			hx_raw, hy_raw, hz_raw = to_horizont(hx_raw, hy_raw, hz_raw, r, p)
+			hy_raw, hx_raw, hz_raw = to_horizont(hx_raw, hy_raw, hz_raw, r, p)
 
 		# <1> Insert row values to model
 		self.model.append_data((hx, hy, hz, hx_raw, hy_raw, hz_raw, h, r, p))
