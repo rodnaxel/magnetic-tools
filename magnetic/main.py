@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import *
 
 from magnetic import sensor
 from magnetic.algorithms import to_horizont
-from magnetic.charts import EllipsoidGraph
+from magnetic.charts import TimeGraph
 from magnetic.magnetic_viewer import SensorDataTable
 from magnetic.models import SensorDataModel
 from magnetic.util import get_arguments
@@ -72,7 +72,7 @@ class MagneticWidget(QDialog):
 		# ...Chart / Table
 		self.stack = stack_layout = QStackedLayout()
 
-		self.chart_view = EllipsoidGraph(self)
+		self.chart_view = TimeGraph(self)
 		size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 		size_policy.setHorizontalStretch(1)
 		size_policy.setVerticalStretch(0)
@@ -165,7 +165,7 @@ class Magnetic(Ui):
 		r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz = data
 
 		if self.options['dub horizont'].checkState():
-			hy_raw, hx_raw, hz_raw = to_horizont(hx_raw, hy_raw, hz_raw, r, p)
+			hy_raw, hx_raw, hz_raw = to_horizont(hy_raw, hx_raw, hz_raw, r, p)
 
 		# <1> Insert row values to model
 		self.model.append_data((hx, hy, hz, hx_raw, hy_raw, hz_raw, h, r, p))

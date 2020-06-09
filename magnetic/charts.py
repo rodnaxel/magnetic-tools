@@ -21,9 +21,9 @@ class ScatterChart(QChart):
 		self.axis_x.setTickCount(11)
 		self.axis_x.setLabelFormat("%.1f")
 		self.axis_x.setTitleText(self.labelx)
-		self.axis_x.setRange(-35, 35)
+		self.axis_x.setRange(0, 600)
 		self.addAxis(self.axis_x, QtCore.Qt.AlignBottom)
-		
+
 		# Setting Y-axis
 		self.axis_y = QtChart.QValueAxis()
 		self.axis_y.setTickCount(11)
@@ -31,12 +31,12 @@ class ScatterChart(QChart):
 		self.axis_y.setLabelFormat("%.1f")
 		self.axis_y.setTitleText(self.labely)
 		self.addAxis(self.axis_y, QtCore.Qt.AlignLeft)
-	
+
 	def add_series(self, name):
-		series = QtChart.QScatterSeries()
+		series = QtChart.QLineSeries()
 		series.setName(name)
-		series.setMarkerSize(5)
-		series.setBorderColor(series.pen().color())
+		# series.setMarkerSize(5)
+		# series.setBorderColor(series.pen().color())
 		self.addSeries(series)
 		series.attachAxis(self.axis_x)
 		series.attachAxis(self.axis_y)

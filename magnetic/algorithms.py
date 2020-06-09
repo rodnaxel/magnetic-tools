@@ -3,17 +3,21 @@ from math import cos, sin
 from operator import itemgetter
 
 
-def to_horizont(x, y, z, roll, pitch):
+def to_horizont(y, x, z, roll_grad, pitch_grad):
 	""" This function used to convert field from non-horizontal to horizontal
-		x,y,z : float : magnetic fields
-		roll, pitch: float : angle in radian
+		x,y : float : magnetic fields
+		z : float : negetive from sensor
+		roll_grad, pitch_grad: float : angle in grad
 	"""
+	r = math.radians(roll_grad)
+	p = math.radians(-pitch_grad)
 
-	xh = x * cos(pitch) - y * sin(pitch) * sin(roll) - z * sin(pitch) * cos(roll)
-	yh = y * cos(roll) - z * sin(roll)
-	zh = x * sin(pitch) + y * sin(roll) * cos(pitch) + z * cos(pitch) * cos(roll)
+	# Rewrite formul with z is as negative
+	xh = x * cos(p) - y * sin(p) * sin(r) + z * sin(p) * cos(r)
+	yh = y * cos(r) + z * sin(r)
+	zh = x * sin(p) + y * sin(r) * cos(p) - z * cos(p) * cos(r)
 
-	return xh, yh, zh
+	return yh, xh, zh
 
 
 class Algorithm:

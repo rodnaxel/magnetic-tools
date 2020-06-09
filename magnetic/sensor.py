@@ -19,14 +19,14 @@ def fetch_dorient(message):
 	roll = kang2dec(fields[0])
 	pitch = kang2dec(fields[1])
 	heading = kang2dec(fields[2], signed=False)
-	magb_raw = gauss2tesla(fields[3])
-	magc_raw = gauss2tesla(fields[4])
+	magc_raw = gauss2tesla(fields[3])
+	magb_raw = gauss2tesla(fields[4])
 	magz_raw = gauss2tesla(fields[5])
-	magb = gauss2tesla(fields[6])
-	magc = gauss2tesla(fields[7])
+	magc = gauss2tesla(fields[6])
+	magb = gauss2tesla(fields[7])
 	magz = gauss2tesla(fields[8])
 
-	return roll, pitch, heading, magb_raw, magc_raw, magz_raw, magb, magc, magz
+	return roll, pitch, heading, magc_raw, magb_raw, magz_raw, magc, magb, magz
 
 
 sensor_buffer = Queue(maxsize=1)
