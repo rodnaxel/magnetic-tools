@@ -94,10 +94,10 @@ class MagneticWidget(QDialog):
 		
 		self.chart_box.currentTextChanged[str].connect(self.switch_view)
 	
-	def switch_view(self, s):
-		if s == "Graph":
+	def switch_view(self, view_name):
+		if view_name == "Graph":
 			self.stack.setCurrentIndex(0)
-		elif s == "Table":
+		elif view_name == "Table":
 			self.stack.setCurrentIndex(1)
 
 
@@ -139,7 +139,7 @@ class Magnetic(Ui):
 		self.setupUi()
 		
 		# TODO: Fetch from class
-		self.serobj = serobj = serial.Serial("/dev/ttyUSB0", timeout=0.1)
+		self.serobj = serobj = serial.Serial("com3", timeout=0.1)
 		self.sensor = sensor.SensorDriver(serobj)
 		t = threading.Thread(target=self.sensor.run, daemon=True)
 		t.start()
@@ -155,34 +155,31 @@ class Magnetic(Ui):
 
 		self.model.rowsInserted.connect(self.centralWidget().chart_view.redraw)
 
-	def test(self):
-		print("Updata")
-
 	def timerEvent(self, QTimerEvent):
 		""" Handler timer event"""
 		# time = QtCore.QTime().currentTime().toString()
-		data = [round(item, 1) for item in sensor.sensor_buffer.get()]
+		data = [round(item, 1) for item in sensor.SENSOR_QUEUE.get()]
 		r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz = data
 
+		# <1> Apply Dub algorithm
 		if self.options['dub horizont'].checkState():
 			hy_raw, hx_raw, hz_raw = to_horizont(hy_raw, hx_raw, hz_raw, r, p)
 
-		# <1> Insert row values to model
+		# <2> Insert row values to model
 		self.model.append_data((hx, hy, hz, hx_raw, hy_raw, hz_raw, h, r, p))
 
-		# <2> Set values to data view
+		# <3> Set values to data view
+		self.show_data(h, hx, hx_raw, hy, hy_raw, hz, hz_raw, p, r)
+
+	def show_data(self, h, hx, hx_raw, hy, hy_raw, hz, hz_raw, p, r):
 		fmt_value = '{0:.1f}'
-
 		self.data_view['samples'].setText("{}".format(self.model.rowCount()))
-
 		self.data_view['roll'].setText(fmt_value.format(r))
 		self.data_view['pitch'].setText(fmt_value.format(p))
 		self.data_view['heading'].setText(fmt_value.format(h))
-
 		self.data_view['hxr'].setText(fmt_value.format(hx_raw))
 		self.data_view['hyr'].setText(fmt_value.format(hy_raw))
 		self.data_view['hzr'].setText(fmt_value.format(hz_raw))
-
 		self.data_view['hx'].setText(fmt_value.format(hx))
 		self.data_view['hy'].setText(fmt_value.format(hy))
 		self.data_view['hz'].setText(fmt_value.format(hz))
@@ -196,10 +193,10 @@ class Magnetic(Ui):
 		
 		if self.collection_start:
 			self.on_clear()
-			self.centralWidget().chart_view.add_graph("Graph Hx(Hy)", self.model, xcol=0, ycol=1)
+			self.centralWidget().chart_view.add_graph("Graph Roll", self.model, xcol=0, ycol=1)
 			self.status.showMessage("Clear old data, Connect")
 			self.buttons["connect"].setText("Disconnect")
-			self.timer_recieve = self.startTimer(50, timerType=QtCore.Qt.PreciseTimer)
+			self.timer_recieve = self.startTimer(100, timerType=QtCore.Qt.PreciseTimer)
 		else:
 			self.status.showMessage("Disconnect")
 			self.buttons["connect"].setText("Connect")
@@ -222,8 +219,7 @@ def main():
 		myappid = u'navi-dals.magnetic-tools.proxy.001'  # arbitrary string
 		ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 		app.setWindowIcon(QIcon(':/rc/Interdit.ico'))
-	
-	# magnetic = MagneticViewer()
+
 	magnetic = Magnetic()
 	magnetic.centre()
 	magnetic.show()

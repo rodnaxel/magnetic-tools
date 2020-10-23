@@ -3,19 +3,27 @@ import time
 from queue import Queue
 
 import serial
+import serial.tools.list_ports as tools
 
 
 def kang2dec(kang, signed=True):
 	return round(int.from_bytes(kang, byteorder='little', signed=signed) * 359.9 / 65536.0, 3)
 
 
+def dec2kang(dec, signed=True):
+	return (int(dec * 65536.0 / 359.9)).to_bytes(2, byteorder='little', signed=signed)
+
+
 def gauss2tesla(gauss):
 	return round(int.from_bytes(gauss, byteorder='little', signed=True) * 750.0 / 65536.0, 3)
 
 
-def fetch_dorient(message):
-	fields = [message[2 * i: 2 * (i + 1)] for i in range(9)]
+def tesla2gauss(tesla):
+	return (int(tesla * 65536.0 / 750.0)).to_bytes(2, byteorder='little', signed=True)
 
+
+def parse_dorient(message):
+	fields = [message[2 * i: 2 * (i + 1)] for i in range(9)]
 	roll = kang2dec(fields[0])
 	pitch = kang2dec(fields[1])
 	heading = kang2dec(fields[2], signed=False)
@@ -25,11 +33,80 @@ def fetch_dorient(message):
 	magc = gauss2tesla(fields[6])
 	magb = gauss2tesla(fields[7])
 	magz = gauss2tesla(fields[8])
-
 	return roll, pitch, heading, magc_raw, magb_raw, magz_raw, magc, magb, magz
 
 
-sensor_buffer = Queue(maxsize=1)
+SENSOR_QUEUE = Queue(maxsize=1)
+
+
+def scan_ports():
+	ports = [port.device for port in tools.comports()]
+	return ports
+
+
+class NewSensorDriver(object):
+	SOP1 = bytes.fromhex("0d")
+	SOP2 = bytes.fromhex("0a")
+	SOP3 = bytes.fromhex("7e")
+
+	def __init__(self, port):
+		self.sobj = serial.Serial(port=port, baudrate=9600, timeout=0.1)
+		self.running = True
+
+	def read(self):
+		message = b''
+		start = 0
+		pid = 0
+		size = 0
+
+		while self.running:
+			try:
+				buf = self.sobj.read(1)
+			except serial.SerialException:
+				SENSOR_QUEUE.put(object())
+
+			if start == 0:
+				if buf == self.SOP1:
+					start += 1
+				else:
+					start = 0
+			elif start == 1:
+				if buf == self.SOP2:
+					start += 1
+				else:
+					start = 0
+			elif start == 2:
+				if buf == self.SOP3:
+					start += 1
+				else:
+					start = 0
+			elif start == 3:
+				pid = int.from_bytes(buf, byteorder='little')
+				start = 4
+			elif start == 4:
+				size = int.from_bytes(buf, byteorder='little')
+				start = 5
+			elif start == 5:
+				if len(message) < size:
+					message += buf
+				else:
+					#if pid == 112:
+					#	data = parse_dorient(message)
+					#	SENSOR_QUEUE.put(data)
+					SENSOR_QUEUE.put(message)
+					start = 0
+					message = b''
+			else:
+				print("Error: sensor.readany(): ")
+		print('Exit')
+
+	def write(self):
+		pass
+
+	def close(self):
+		if self.sobj.isOpen():
+			self.sobj.close()
+
 
 class SensorDriver:
 	SOP1 = bytes.fromhex("0d")
@@ -44,7 +121,7 @@ class SensorDriver:
 		self.bus.write(bytes.fromhex("0d0a7e7201040c"))
 	
 	def recieve(self):
-		return sensor_buffer.get()
+		return SENSOR_QUEUE.get()
 	
 	def stop(self):
 		self._running = False
@@ -61,7 +138,7 @@ class SensorDriver:
 			try:
 				buf = self.bus.read(1)
 			except serial.SerialException:
-				sensor_buffer.put(object())
+				SENSOR_QUEUE.put(object())
 			if start == 0:
 				if buf == self.SOP1:
 					start += 1
@@ -88,19 +165,17 @@ class SensorDriver:
 					message += buf
 				else:
 					if pid == 112:
-						data = fetch_dorient(message)
-						sensor_buffer.put(data)
+						data = parse_dorient(message)
+						SENSOR_QUEUE.put(data)
 					start = 0
 					message = b''
 			else:
 				print("Error: sensor.readany(): ")
 
-
 def debug():
-	serobj = serial.Serial("/dev/ttyUSB0", timeout=0.1)
+	serobj = serial.Serial("COM3", timeout=0.1)
 	sensor = SensorDriver(serobj)
-	
-	#
+
 	t = threading.Thread(target=sensor.run)
 	t.start()
 	
@@ -113,6 +188,21 @@ def debug():
 		sensor.stop()
 		serobj.close()
 
+def debug_new_driver():
+	sensor_driver = NewSensorDriver(port='com3')
+	t = threading.Thread(target=sensor_driver.read)
+	t.start()
+	try:
+		while True:
+			message = SENSOR_QUEUE.get(timeout=0.1)
+			data = parse_dorient(message)
+			#print(f"{data=}")
+			time.sleep(0.1)
+	except KeyboardInterrupt as e:
+		sensor_driver.running = False
+		t.join()
+
 
 if __name__ == "__main__":
-	debug()
+	#debug()
+	debug_new_driver()

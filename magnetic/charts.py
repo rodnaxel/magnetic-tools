@@ -55,8 +55,6 @@ class TimeModelMapper:
 		r = self.x - 1
 		index = self.model.createIndex(r, 0)
 		y = self.model.data(index, role=QtCore.Qt.DisplayRole)
-		print(index.row(), index.column(), y)
-		print(self.model.fetch_data())
 		self.series.append(float(self.x), float(y))
 
 	def setModel(self, model):
