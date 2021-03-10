@@ -5,6 +5,10 @@ from queue import Queue
 import serial
 import serial.tools.list_ports as tools
 
+def scan_ports():
+	ports = [port.device for port in tools.comports()]
+	return ports
+
 
 def kang2dec(kang, signed=True):
 	return round(int.from_bytes(kang, byteorder='little', signed=signed) * 359.9 / 65536.0, 3)
@@ -39,91 +43,34 @@ def parse_dorient(message):
 SENSOR_QUEUE = Queue(maxsize=1)
 
 
-def scan_ports():
-	ports = [port.device for port in tools.comports()]
-	return ports
-
-
-class NewSensorDriver(object):
+class SensorDriver(object):
 	SOP1 = bytes.fromhex("0d")
 	SOP2 = bytes.fromhex("0a")
 	SOP3 = bytes.fromhex("7e")
 
-	def __init__(self, port):
-		self.sobj = serial.Serial(port=port, baudrate=9600, timeout=0.1)
-		self.running = True
+	def __init__(self, bus):
+		self.bus = bus
 
-	def read(self):
-		message = b''
-		start = 0
-		pid = 0
-		size = 0
-
-		while self.running:
-			try:
-				buf = self.sobj.read(1)
-			except serial.SerialException:
-				SENSOR_QUEUE.put(object())
-
-			if start == 0:
-				if buf == self.SOP1:
-					start += 1
-				else:
-					start = 0
-			elif start == 1:
-				if buf == self.SOP2:
-					start += 1
-				else:
-					start = 0
-			elif start == 2:
-				if buf == self.SOP3:
-					start += 1
-				else:
-					start = 0
-			elif start == 3:
-				pid = int.from_bytes(buf, byteorder='little')
-				start = 4
-			elif start == 4:
-				size = int.from_bytes(buf, byteorder='little')
-				start = 5
-			elif start == 5:
-				if len(message) < size:
-					message += buf
-				else:
-					#if pid == 112:
-					#	data = parse_dorient(message)
-					#	SENSOR_QUEUE.put(data)
-					SENSOR_QUEUE.put(message)
-					start = 0
-					message = b''
-			else:
-				print("Error: sensor.readany(): ")
-		print('Exit')
-
-	def write(self):
+	def recieve(self):
 		pass
 
-	def close(self):
-		if self.sobj.isOpen():
-			self.sobj.close()
+	def send(self):
+		pass
 
 
-class SensorDriver:
+class Sensor(object):
 	SOP1 = bytes.fromhex("0d")
 	SOP2 = bytes.fromhex("0a")
 	SOP3 = bytes.fromhex("7e")
-	
+
 	def __init__(self, bus):
 		self.bus = bus
 		self._running = True
 
-	def revert(self):
-		self.bus.write(bytes.fromhex("0d0a7e7201040c"))
-	
 	def recieve(self):
 		return SENSOR_QUEUE.get()
 	
-	def stop(self):
+	def terminate(self):
 		self._running = False
 	
 	def run(self):
@@ -172,9 +119,13 @@ class SensorDriver:
 			else:
 				print("Error: sensor.readany(): ")
 
+
 def debug():
-	serobj = serial.Serial("COM3", timeout=0.1)
-	sensor = SensorDriver(serobj)
+	ports = scan_ports()
+	print(f"Available ports: {ports}")
+	port = input("Select port:")
+	serobj = serial.Serial(port, timeout=0.1)
+	sensor = Sensor(serobj)
 
 	t = threading.Thread(target=sensor.run)
 	t.start()
@@ -185,24 +136,9 @@ def debug():
 			print(data)
 			time.sleep(0.1)
 	except KeyboardInterrupt as e:
-		sensor.stop()
+		sensor.terminate()
 		serobj.close()
-
-def debug_new_driver():
-	sensor_driver = NewSensorDriver(port='com3')
-	t = threading.Thread(target=sensor_driver.read)
-	t.start()
-	try:
-		while True:
-			message = SENSOR_QUEUE.get(timeout=0.1)
-			data = parse_dorient(message)
-			#print(f"{data=}")
-			time.sleep(0.1)
-	except KeyboardInterrupt as e:
-		sensor_driver.running = False
-		t.join()
 
 
 if __name__ == "__main__":
-	#debug()
-	debug_new_driver()
+	debug()

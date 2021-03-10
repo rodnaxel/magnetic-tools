@@ -54,7 +54,7 @@ class SensorDataModel(QAbstractTableModel):
                 try:
                     return self._data[index.row()][index.column()]
                 except IndexError:
-                    print(f"Error: {index.row()=},{index.column()=}")
+                    #print(f"Error: {index.row()=},{index.column()=}")
                     return None
             elif role == Qt.TextAlignmentRole:
                 return Qt.AlignRight

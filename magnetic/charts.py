@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from PyQt5 import QtChart, QtCore
 from PyQt5.QtChart import QChartView, QChart, QVXYModelMapper
 from PyQt5.QtGui import QPainter
@@ -14,29 +14,29 @@ class ScatterChart(QChart):
 		self.setTitle(title)
 		self.setAnimationOptions(QChart.NoAnimation)
 		self.setAxis()
+
+		self.series_ = series = QtChart.QLineSeries()
 	
 	def setAxis(self):
 		# Setting X-axis
 		self.axis_x = QtChart.QValueAxis()
 		self.axis_x.setTickCount(11)
-		self.axis_x.setLabelFormat("%.1f")
+		self.axis_x.setLabelFormat("%.0f")
 		self.axis_x.setTitleText(self.labelx)
 		self.axis_x.setRange(0, 600)
 		self.addAxis(self.axis_x, QtCore.Qt.AlignBottom)
 
 		# Setting Y-axis
 		self.axis_y = QtChart.QValueAxis()
-		self.axis_y.setTickCount(11)
-		self.axis_y.setRange(-35, 35)
+		self.axis_y.setTickCount(10)
+		self.axis_y.setRange(-45, 45)
 		self.axis_y.setLabelFormat("%.1f")
 		self.axis_y.setTitleText(self.labely)
 		self.addAxis(self.axis_y, QtCore.Qt.AlignLeft)
 
 	def add_series(self, name):
-		series = QtChart.QLineSeries()
+		self.series_ = series = QtChart.QLineSeries()
 		series.setName(name)
-		# series.setMarkerSize(5)
-		# series.setBorderColor(series.pen().color())
 		self.addSeries(series)
 		series.attachAxis(self.axis_x)
 		series.attachAxis(self.axis_y)
@@ -51,15 +51,15 @@ class TimeModelMapper:
 	x = 0
 
 	def _update(self):
+		""" This method used to update series"""
 		self.x += 1
-		r = self.x - 1
-		index = self.model.createIndex(r, 0)
+		row = self.x - 1
+		index = self.model.createIndex(row, 2)
 		y = self.model.data(index, role=QtCore.Qt.DisplayRole)
 		self.series.append(float(self.x), float(y))
 
 	def setModel(self, model):
 		self.model = model
-
 		self.model.rowsInserted.connect(self._update)
 
 	def setYColumn(self, col):
@@ -72,6 +72,7 @@ class TimeModelMapper:
 class TimeGraph(QChartView):
 	def __init__(self, parent=None, model=None, *__args):
 		super().__init__(*__args)
+
 		# Store chart in variable because for support autocomplete
 		self._chart = ScatterChart(title="Scatter Chart",
 								   labelx="T, ms",
@@ -84,7 +85,12 @@ class TimeGraph(QChartView):
 
 		self.mappers = {}
 
-	def set_model(self, model):
+		self._chart.series_ .pointAdded["int"].connect(self.on_point)
+
+	def on_point(self, index):
+		print("Added")
+
+	def setModel(self, model):
 		self.model = model
 
 	def add_graph(self, name, model=None, xcol=None, ycol=None):
@@ -97,6 +103,7 @@ class TimeGraph(QChartView):
 			# mapper.setModel(self.model)
 			# mapper.setSeries(self._chart.series()[-1])
 			# self.mappers[name] = mapper
+
 			mapper = TimeModelMapper()
 			mapper.setModel(self.model)
 			mapper.setSeries(self._chart.series()[-1])
