@@ -102,13 +102,26 @@ class MagneticWidget(QDialog):
         self.stack = stack_layout = QStackedLayout()
 
         self.chart_view = TimeGraph(self)
+        self.chart_view2 = TimeGraph(self)
+        self.chart_view3 = TimeGraph(self)
+
+        wgt = QWidget(self)
+        layout = QVBoxLayout(wgt)
+
         size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         size_policy.setHorizontalStretch(1)
         size_policy.setVerticalStretch(0)
         size_policy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
         self.chart_view.setSizePolicy(size_policy)
         self.chart_view.setMaximumWidth(self.chart_view.maximumHeight())
-        stack_layout.addWidget(self.chart_view)
+
+        layout.addWidget(self.chart_view)
+        #layout.addWidget(self.chart_view2)
+        #layout.addWidget(self.chart_view3)
+
+
+        #stack_layout.addWidget(self.chart_view)
+        stack_layout.addWidget(wgt)
 
         self.table_view = SensorDataTable(self)
         stack_layout.addWidget(self.table_view)
@@ -135,7 +148,7 @@ class MagneticWidget(QDialog):
         print(f"Category switched to {name}")
 
 
-class Ui(QMainWindow):
+class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.collection_start = False
@@ -149,6 +162,8 @@ class Ui(QMainWindow):
 
         # Central Widget
         central_widget = MagneticWidget(self)
+
+
         self.setCentralWidget(central_widget)
 
         self.create_statusbar()
@@ -164,10 +179,15 @@ class Ui(QMainWindow):
         self.statusBar().addPermanentWidget(self.counter)
 
     def create_menu(self):
+        def _action_rescan():
+            available = sensor.scan_ports()
+            self.portbox.clear()
+            self.portbox.addItems(available)
+
         menu = self.menuBar()
         file_menu = QMenu("&File", self)
         menu.addMenu(file_menu)
-        file_menu.addAction("Action")
+        file_menu.addAction("Rescan", _action_rescan)
 
     def create_toolbar(self):
         # Toolbar
@@ -204,7 +224,7 @@ class Ui(QMainWindow):
         self.move(frame_gm.topLeft())
 
 
-class Magnetic(Ui):
+class Magnetic(MainWindow):
     app_title = "Magnetic Viewer - {0}"
 
     def __init__(self, data=None, title=None, *args, **kwargs):
@@ -241,7 +261,7 @@ class Magnetic(Ui):
         """ Handler timer event"""
         # time = QtCore.QTime().currentTime().toString()
         try:
-            data = [round(item, 1) for item in sensor.SENSOR_QUEUE.get(timeout=0.1)]
+            data = [round(item, 1) for item in sensor.SENSOR_QUEUE.get(timeout=0.2)]
         except queue.Empty:
             self.status.showMessage("No sensor data")
             return
@@ -280,7 +300,7 @@ class Magnetic(Ui):
         self.collection_start = ~self.collection_start
 
         if self.collection_start:
-            self.on_run()
+            self.on_start()
         else:
             self.on_stop()
 
@@ -297,7 +317,7 @@ class Magnetic(Ui):
         self.serobj.close()
         del self.sensor
 
-    def on_run(self):
+    def on_start(self):
         self.on_clear()
         self.centralWidget().chart_view.add_graph("Graph Roll", self.model, xcol=0, ycol=1)
         self.status.showMessage("Clear old data, Connect")
