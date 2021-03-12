@@ -5,8 +5,8 @@ from PyQt5.QtWidgets import QTableView, QHeaderView, QMainWindow, QWidget, QActi
 	QSpacerItem, QSizePolicy, QPushButton, QSplitter, QVBoxLayout, QFileDialog, QApplication
 
 from magnetic.algorithms import Algorithm
-from magnetic.charts import EllipsoidGraph
-from magnetic.models import SensorDataModel
+from magnetic.chart.qt_charts import EllipsoidGraph
+from magnetic.model.sensormodel import SensorDataModel
 from magnetic.util import from_csv, to_csv, get_arguments
 
 

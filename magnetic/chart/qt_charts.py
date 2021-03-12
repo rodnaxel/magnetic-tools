@@ -1,4 +1,3 @@
-#import matplotlib.pyplot as plt
 from PyQt5 import QtChart, QtCore
 from PyQt5.QtChart import QChartView, QChart, QVXYModelMapper
 from PyQt5.QtGui import QPainter
@@ -54,9 +53,12 @@ class TimeModelMapper:
 		""" This method used to update series"""
 		self.x += 1
 		row = self.x - 1
-		index = self.model.createIndex(row, 2)
+		index = self.model.createIndex(row, 0)
 		y = self.model.data(index, role=QtCore.Qt.DisplayRole)
 		self.series.append(float(self.x), float(y))
+
+		if len(self.series.pointsVector()) > 600:
+			self.series.clear()
 
 	def setModel(self, model):
 		self.model = model
@@ -74,21 +76,14 @@ class TimeGraph(QChartView):
 		super().__init__(*__args)
 
 		# Store chart in variable because for support autocomplete
-		self._chart = ScatterChart(title="Scatter Chart",
-								   labelx="T, ms",
+		self._chart = ScatterChart(labelx="T, ms",
 								   labely="H, uT")
 		self.setChart(self._chart)
-
 		self.setRenderHint(QPainter.Antialiasing)
 		# self.setRubberBand(QChartView.RectangleRubberBand)
-		# self.setCursor(QtCore.Qt.SizeAllCursor)
+		#self.setCursor(QtCore.Qt.SizeAllCursor)
 
 		self.mappers = {}
-
-		self._chart.series_ .pointAdded["int"].connect(self.on_point)
-
-	def on_point(self, index):
-		print("Added")
 
 	def setModel(self, model):
 		self.model = model
@@ -97,19 +92,18 @@ class TimeGraph(QChartView):
 		self._chart.add_series(name)
 
 		if model:
+			mapper = TimeModelMapper()
+			mapper.setModel(self.model)
+			mapper.setSeries(self._chart.series()[-1])
+			self.mappers[name] = mapper
+
 			# mapper = QVXYModelMapper()
 			# mapper.setXColumn(xcol)
 			# mapper.setYColumn(ycol)
 			# mapper.setModel(self.model)
 			# mapper.setSeries(self._chart.series()[-1])
 			# self.mappers[name] = mapper
-
-			mapper = TimeModelMapper()
-			mapper.setModel(self.model)
-			mapper.setSeries(self._chart.series()[-1])
-			self.mappers[name] = mapper
-
-	# self.model.cell_color = "{}".format(self._chart.series()[-1].color().name())
+			# self.model.cell_color = "{}".format(self._chart.series()[-1].color().name())
 
 	def redraw(self):
 		pass
@@ -171,30 +165,3 @@ class EllipsoidGraph(QChartView):
 		super().mouseMoveEvent(event)
 		x = self._chart.mapToValue(event.pos()).x()
 		y = self._chart.mapToValue(event.pos()).y()
-
-
-class MatplotlibChart:
-	""" TODO: Create widget with matplotlib """
-	
-	@staticmethod
-	def plot(dataset_base, dataset_finish=None, *, frame='decart'):
-		""" This function used to draw  """
-		
-		fig, ax = plt.subplots()
-		fig.set_size_inches(8.5, 8.5)
-		
-		ax.set(xlabel='B, uT', ylabel='C, uT',
-		       title='Magnetic ellips')
-		
-		x = [x for (x, _) in dataset_base]
-		y = [y for (_, y) in dataset_base]
-		ax.scatter(x, y, marker='.')
-		
-		if dataset_finish:
-			xc = [x for (x, _) in dataset_finish]
-			yc = [y for (_, y) in dataset_finish]
-			ax.plot(xc, yc, marker='.', color='red')
-		
-		ax.grid()
-		# fig.savefig("test.png")
-		plt.show()
