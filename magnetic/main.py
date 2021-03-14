@@ -9,13 +9,13 @@ from PyQt5 import QtCore
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from magnetic import sensor
-from magnetic.algorithms import to_horizont
-from magnetic.chart.qt_charts import TimeGraph
-from magnetic.chart.mpl_chart import SimplePlot
-from magnetic.magnetic_viewer import SensorDataTable
-from magnetic.model.sensormodel import SensorDataModel
-from magnetic.util import get_arguments
+import sensor
+from algorithms import to_horizont
+from chart.qt_charts import TimeGraph
+from chart.mpl_chart import SimplePlot
+from magnetic_calibrate import SensorDataTable
+from model.sensormodel import SensorDataModel
+from util import get_arguments
 
 # For run in Raspberry Pi
 if platform.machine() == "armv7l":
@@ -23,6 +23,7 @@ if platform.machine() == "armv7l":
     os.environ["QT_QPA_PLATFORM"] = "linuxfb"
     os.environ["QT_QPA_FB_FORCE_FULLSCREEN "] = "0"
     PORT_NAME = "/dev/ttyUSB1"
+    
 else:
     PORT_NAME = "/dev/ttyUSB0"
 
@@ -186,26 +187,68 @@ class MainWindow(QMainWindow):
         toolbar = self.addToolBar("File")
         toolbar.setMovable(False)
 
-        # Port
+        self.buttons = {}
+
+        # Start, stop, pause button
+        self.modeButtonGroup = QButtonGroup()
+        for key, icon, tooltip in (
+            ('start', 'assets/start-icon.png', 'connect and run'),
+            ('stop', 'assets/stop-red-icon.png', 'stop'),
+            ('pause', 'assets/pause-icon.png', 'pause')
+        ):
+            btn = QToolButton()
+            btn.setObjectName(key)
+            btn.setIcon(QIcon(icon))
+            btn.setToolTip(tooltip)
+            btn.setCheckable(True)
+            if key == 'stop':
+                btn.setChecked(True)
+
+            self.modeButtonGroup.addButton(btn)
+            toolbar.addWidget(btn)
+            self.buttons[key] = btn
+        toolbar.addSeparator()
+
+        # Portbox
         toolbar.addWidget(QLabel("Port:", self))
         self.portbox = QComboBox(self)
         toolbar.addWidget(self.portbox)
+        
+        # Button rescan
+        btn = QToolButton()
+        btn.setIcon(QIcon("assets/update-icon.png"))
+        toolbar.addWidget(btn)
+        self.buttons['rescan'] = btn
         toolbar.addSeparator()
 
         # View Mode
-        self.chart_box = QComboBox(self)
-        self.chart_box.addItems(("Graph", "Table"))
-        toolbar.addWidget(QLabel("Show as:", self))
-        toolbar.addWidget(self.chart_box)
+        self.viewButtonGroup = QButtonGroup()
+        for key, icon, tooltip in (
+            ("chart", "assets/charts.png", "Chart View"),
+            ("table", "assets/table.png", "Table View")
+        ):
+            btn = QToolButton()
+            btn.setObjectName(key)
+            btn.setIcon(QIcon(icon))
+            btn.setToolTip(tooltip)
+            btn.setCheckable(True)
+            if key == "chart":
+                btn.setChecked(True)
+
+            self.viewButtonGroup.addButton(btn)
+            toolbar.addWidget(btn)
+            self.buttons[key] = btn
+        
         toolbar.addSeparator()
 
-        # Categories Mode
-        self.categories_box = QComboBox(self)
-        self.categories_box.addItems(("All", "Heading", "Inclinometer", "Magnitometer"))
-        toolbar.addWidget(QLabel("Categories:", self))
-        toolbar.addWidget(self.categories_box)
+        btn = QToolButton()
+        btn.setIcon(QIcon('assets/log-icon'))
+        btn.setToolTip("Logging on/off")
+        btn.setCheckable(True)
+        toolbar.addWidget(btn)
+        self.buttons['log'] = btn
 
-
+        
     def centre(self):
         """ This method aligned main window related center screen """
         frame_gm = self.frameGeometry()
@@ -233,6 +276,8 @@ class Magnetic(MainWindow):
         if not available_ports:
             self.status.showMessage("No available ports")
             self.buttons['connect'].setDisabled(True)
+            # for btn in self.modeButtonGroup.buttons():
+            #     btn.setDisabled(True)
 
         # Set model
         self.model = SensorDataModel()
@@ -245,7 +290,7 @@ class Magnetic(MainWindow):
         self.buttons["quit"].clicked.connect(self.on_quit)
 
         self.portbox.currentTextChanged[str].connect(self.on_switch_port)
-        self.chart_box.currentTextChanged[str].connect(self.on_switch_view)
+        self.viewButtonGroup.buttonClicked[QAbstractButton].connect(self.on_switch_view)
 
         self.model.rowsInserted.connect(self.centralWidget().chart_view.redraw)
 
@@ -332,10 +377,10 @@ class Magnetic(MainWindow):
     def on_switch_port(self, port):
         print(f'on_switch_port(): {port}')
 
-    def on_switch_view(self, view_name):
-        if view_name == "Graph":
+    def on_switch_view(self, btn):
+        if btn.objectName() == 'chart':
             self.stack.setCurrentIndex(0)
-        elif view_name == "Table":
+        else:
             self.stack.setCurrentIndex(1)
 
     @staticmethod

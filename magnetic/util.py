@@ -6,7 +6,7 @@ from openpyxl import load_workbook, Workbook
 PATH_DS = '../downloads/example_dataset.xlsx'
 SHEET = ''
 
-
+# Excel
 # TODO: Write convertor test data to csv file
 def from_excel(path, sheet_name, rangex, rangey):
 	wb = load_workbook(filename=path)
@@ -26,6 +26,7 @@ def to_excel(path=None):
 	wb.save('./downloads/sample.xlsx')
 
 
+# CSV
 def from_csv(fname):
 	with open(fname, "r") as f:
 		reader = csv.reader(f, quoting=csv.QUOTE_NONNUMERIC)
@@ -38,8 +39,18 @@ def to_csv(fname, data):
 		writer.writerows(data)
 
 
+# Veresov magnetic log
+def from_veresov(fname):
+	with open(fname, 'r') as f:
+		for line in f:
+			print(line.split())
+
 def get_arguments():
 	p = argparse.ArgumentParser()
 	p.add_argument('--mode', action='store', dest='mode', default=None)
 	p.add_argument('--data', action='store', dest='path_to_dataset', default=None)
 	return p.parse_args()
+
+
+if __name__ == "__main__":
+	from_veresov("/home/tech/workspace/python/magnetic-tools/downloads/log_12032021")

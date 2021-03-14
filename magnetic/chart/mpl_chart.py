@@ -5,12 +5,32 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 
+class BasePlot(FigureCanvas):
+
+    def __init__(self, parent=None, width=5, height=5, dpi=100, cursor_visible=False,
+                 title='', ylabel='', xlabel=''):
+        
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        fig.suptitle(title, fontsize=10)
+
+        self.axes = fig.add_subplot(111)
+        self.axes.grid()
+
+        super(BasePlot, self).__init__(fig) 
+
+        if cursor_visible:
+            self.cursor = Cursor(self.axes)
+            fig.canvas.mpl_connect('motion_notify_event', self.cursor.on_mouse_move)           
+
+
+
 class SimplePlot(FigureCanvas):
     xmax = 100
     xmin = 0
 
     def __init__(self, parent=None, width=5, height=5, dpi=100, cursor_visible=False,
                  title='', ylabel='', xlabel=''):
+
         fig = Figure(figsize=(width, height), dpi=dpi)
         fig.suptitle(title, fontsize=10)
 
