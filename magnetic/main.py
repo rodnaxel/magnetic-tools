@@ -12,8 +12,8 @@ from PyQt5.QtWidgets import *
 import sensor
 from algorithms import to_horizont
 from chart.qt_charts import TimeGraph
-from chart.mpl_chart import SimplePlot
-from magnetic_calibrate import SensorDataTable
+from chart.mpl_chart import SimplePlot, BasePlot
+from magnetic_viewer import SensorDataTable
 from model.sensormodel import SensorDataModel
 from util import get_arguments
 
@@ -105,19 +105,23 @@ class MagneticWidget(QDialog):
         size_policy.setVerticalStretch(0)
         size_policy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
         # layout.addWidget(self.chart_view)
-
-        # Matplotlib backend
         self.chart_view.setSizePolicy(size_policy)
         self.chart_view.setMaximumWidth(self.chart_view.maximumHeight())
 
-        self.heading_chart = SimplePlot(self, title='Heading Chart')
+        # Matplotlib backend
+
+        self.heading_chart = BasePlot(self, title='Heading Chart')
+        self.heading_chart.add("heading")
         layout.addWidget(self.heading_chart)
 
-        self.inclinometer_chart = SimplePlot(self, title="Inclinometer Chart")
+        #self.inclinometer_chart = SimplePlot(self, title="Inclinometer Chart")
+        self.inclinometer_chart = BasePlot(self, title='Inclinometer')
+        self.inclinometer_chart.add("roll")
+        self.inclinometer_chart.add("pitch")
         layout.addWidget(self.inclinometer_chart)
 
         self.magnitometer_chart = SimplePlot(self, title="Magnitometer Chart")
-        layout.addWidget(self.magnitometer_chart)
+        #layout.addWidget(self.magnitometer_chart)
 
         stack_layout.addWidget(wgt)
 
@@ -136,7 +140,6 @@ class MagneticWidget(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.collection_start = False
 
     def setupUi(self):
         self.setWindowTitle(f"Magnetic Lab")
@@ -221,6 +224,16 @@ class MainWindow(QMainWindow):
         self.buttons['rescan'] = btn
         toolbar.addSeparator()
 
+        # Range
+        self.spin = QSpinBox()
+        self.spin.setValue(100)
+        self.spin.setRange(100, 600)
+        self.spin.setSingleStep(100)
+        self.spin.setSuffix(" ms")
+        self.spin.lineEdit().setReadOnly(True)
+        toolbar.addWidget(self.spin)
+
+        toolbar.addSeparator()
         # View Mode
         self.viewButtonGroup = QButtonGroup()
         for key, icon, tooltip in (
@@ -268,6 +281,8 @@ class Magnetic(MainWindow):
         # uic.loadUi('../magnetic/ui/magnetic_lab.ui', self)
         self.setupUi()
 
+        self.collection_start = False
+
         # Search available ports
         available_ports = sensor.scan_ports()
         self.portbox.addItems(available_ports)
@@ -289,8 +304,11 @@ class Magnetic(MainWindow):
         self.buttons["clear"].clicked.connect(self.on_clear)
         self.buttons["quit"].clicked.connect(self.on_quit)
 
+        self.modeButtonGroup.buttonClicked[QAbstractButton].connect(self.on_run)
+
         self.portbox.currentTextChanged[str].connect(self.on_switch_port)
         self.viewButtonGroup.buttonClicked[QAbstractButton].connect(self.on_switch_view)
+        self.spin.valueChanged[int].connect(self.on_change_interval)
 
         self.model.rowsInserted.connect(self.centralWidget().chart_view.redraw)
 
@@ -316,8 +334,8 @@ class Magnetic(MainWindow):
         self.show_data(r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)
 
         # <4> Update matplotlib plot
-        self.centralWidget().inclinometer_chart.update_plot(r, p)
-        self.centralWidget().heading_chart.update_plot(h,0)
+        self.centralWidget().inclinometer_chart.update_plot(r,p)
+        self.centralWidget().heading_chart.update_plot(h)
 
     def show_data(self, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz):
         fmt_value = '{0:.1f}'
@@ -334,6 +352,16 @@ class Magnetic(MainWindow):
         self.data_view['hx'].setText(fmt_value.format(hx))
         self.data_view['hz'].setText(fmt_value.format(hz))
 
+    def on_run(self, btn):
+        name = btn.objectName()
+        if name == 'start':
+            self.on_start()
+        elif name == 'stop':
+            self.on_stop()
+        elif name == 'pause':
+            self.on_stop()
+            self.centralWidget().inclinometer_chart.set_time(200)
+
     def on_connect(self):
         self.collection_start = ~self.collection_start
         if self.collection_start:
@@ -342,10 +370,13 @@ class Magnetic(MainWindow):
             self.on_stop()
 
     def on_start(self):
+        if self.collection_start:
+            return
+
         self.on_clear()
-        self.centralWidget().chart_view.add_graph("Graph Roll", self.model, xcol=0, ycol=1)
-        self.status.showMessage("Clear old data, Connect")
-        self.buttons["connect"].setText("Disconnect")
+
+        self.status.showMessage("Running")
+        self.buttons["connect"].setText("Stop")
         self.portbox.setDisabled(True)
 
         port = self.portbox.currentText()
@@ -356,10 +387,14 @@ class Magnetic(MainWindow):
         self.t.start()
 
         self.timer_recieve = self.startTimer(100, timerType=QtCore.Qt.PreciseTimer)
+        self.collection_start = True
 
     def on_stop(self):
-        self.status.showMessage("Disconnect")
-        self.buttons["connect"].setText("Connect")
+        if not self.collection_start:
+            return
+
+        self.status.showMessage("Stopped")
+        self.buttons["connect"].setText("Start")
         self.portbox.setEnabled(True)
 
         if self.timer_recieve:
@@ -369,6 +404,10 @@ class Magnetic(MainWindow):
         self.sensor.terminate()
         self.serobj.close()
         del self.sensor
+        self.collection_start = False
+
+    def on_change_interval(self, interval):
+        self.centralWidget().inclinometer_chart.set_time(interval)
 
     def on_clear(self):
         self.model.reset()
