@@ -5,7 +5,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 
-class BasePlot(FigureCanvas):
+class TimePlot(FigureCanvas):
     xmax = 100
     xmin = 0
 
@@ -15,23 +15,21 @@ class BasePlot(FigureCanvas):
         self.fig = fig = Figure(figsize=(width, height), dpi=dpi)
         fig.suptitle(title, fontsize=10)
 
+
         self.axes = fig.add_subplot(111)
         self.axes.set_xlim(self.xmin, self.xmax)
         self.axes.grid()
 
-        super(BasePlot, self).__init__(fig)
+        super(TimePlot, self).__init__(fig)
 
         self.xdata = []
         self.tick = 0
-
-
 
         if cursor_visible:
             self.cursor = Cursor(self.axes)
             fig.canvas.mpl_connect('motion_notify_event', self.cursor.on_mouse_move)
 
-    def set_time(self, xmax):
-        print(f"set time {xmax}")
+    def set_xmax(self, xmax):
         self.xmax = xmax
         self.axes.set_xlim(0, self.xmax)
         self.draw()

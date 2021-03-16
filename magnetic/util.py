@@ -39,18 +39,8 @@ def to_csv(fname, data):
 		writer.writerows(data)
 
 
-# Veresov magnetic log
-def from_veresov(fname):
-	with open(fname, 'r') as f:
-		for line in f:
-			print(line.split())
-
 def get_arguments():
 	p = argparse.ArgumentParser()
 	p.add_argument('--mode', action='store', dest='mode', default=None)
 	p.add_argument('--data', action='store', dest='path_to_dataset', default=None)
 	return p.parse_args()
-
-
-if __name__ == "__main__":
-	from_veresov("/home/tech/workspace/python/magnetic-tools/downloads/log_12032021")

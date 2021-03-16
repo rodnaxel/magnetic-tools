@@ -11,8 +11,7 @@ from PyQt5.QtWidgets import *
 
 import sensor
 from algorithms import to_horizont
-from chart.qt_charts import TimeGraph
-from chart.mpl_chart import SimplePlot, BasePlot
+from chart.mpl_chart import SimplePlot, TimePlot
 from magnetic_viewer import SensorDataTable
 from model.sensormodel import SensorDataModel
 from util import get_arguments
@@ -26,6 +25,9 @@ if platform.machine() == "armv7l":
     
 else:
     PORT_NAME = "/dev/ttyUSB0"
+
+ROOT = os.path.dirname(__file__)
+REPORT_PATH = os.path.join(ROOT, 'reports')
 
 
 class MagneticWidget(QDialog):
@@ -62,73 +64,46 @@ class MagneticWidget(QDialog):
             option_layout.addWidget(check)
             self.options[name] = check
 
-        # Control panel
-        self.buttons = {}
-        for name in ("connect", "collection", "clear", "quit"):
-            btn = QPushButton(name.capitalize(), self)
-            self.buttons[name] = btn
-
         # Layouts
         left_layout = QVBoxLayout()
         left_layout.setContentsMargins(10, 20, 10, 10)
         left_layout.addWidget(gbox)
         left_layout.addWidget(option_box)
-
-        for btn in self.buttons.values():
-            left_layout.addWidget(btn)
         left_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Expanding))
 
         # Table/Graph View
         right_layout = QVBoxLayout()
-
-        # # ...Top chartbar
-        # chart_label = QLabel("Show as:", self)
-        # self.chart_box = QComboBox(self)
-        # self.chart_box.addItems(("Graph", "Table"))
-        #
-        # chartbar_layout = QHBoxLayout()
-        # chartbar_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Expanding))
-        # chartbar_layout.addWidget(chart_label)
-        # chartbar_layout.addWidget(self.chart_box)
-
 
         # ...Chart / Table
         self.stack = stack_layout = QStackedLayout()
 
         wgt = QWidget(self)
         layout = QVBoxLayout(wgt)
-
-        # Qt Charts
-        self.chart_view = TimeGraph(self)
-        size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        size_policy.setHorizontalStretch(1)
-        size_policy.setVerticalStretch(0)
-        size_policy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-        # layout.addWidget(self.chart_view)
-        self.chart_view.setSizePolicy(size_policy)
-        self.chart_view.setMaximumWidth(self.chart_view.maximumHeight())
+        #layout.setSpacing(0)
 
         # Matplotlib backend
+        self.charts = {}
 
-        self.heading_chart = BasePlot(self, title='Heading Chart')
-        self.heading_chart.add("heading")
-        layout.addWidget(self.heading_chart)
+        self.charts['heading'] = chart = TimePlot(self, title='Heading')
+        chart.add("heading")
+        layout.addWidget(chart)
 
-        #self.inclinometer_chart = SimplePlot(self, title="Inclinometer Chart")
-        self.inclinometer_chart = BasePlot(self, title='Inclinometer')
-        self.inclinometer_chart.add("roll")
-        self.inclinometer_chart.add("pitch")
-        layout.addWidget(self.inclinometer_chart)
+        self.charts['inclinometer'] = chart = TimePlot(self, title='Inclinometer')
+        chart.add("roll")
+        chart.add("pitch")
+        layout.addWidget(chart)
 
-        self.magnitometer_chart = SimplePlot(self, title="Magnitometer Chart")
-        #layout.addWidget(self.magnitometer_chart)
+        self.charts['magnitometer'] = chart = TimePlot(self, title='Magnitometer')
+        chart.add("hy")
+        chart.add("hx")
+        chart.add("hz")
+        layout.addWidget(chart)
 
         stack_layout.addWidget(wgt)
 
         self.table_view = SensorDataTable(self)
         stack_layout.addWidget(self.table_view)
 
-       # right_layout.addLayout(chartbar_layout)
         right_layout.addLayout(stack_layout, 2)
 
         # Central Layout
@@ -151,15 +126,38 @@ class MainWindow(QMainWindow):
 
         # Central Widget
         central_widget = MagneticWidget(self)
-        self.dock = QDockWidget('Dockable', self)
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
         self.setCentralWidget(central_widget)
 
+        # Dock widgets
+        #self.dock = self.create_dock()
+        #self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
+
         # Environment
-        self.buttons = self.centralWidget().buttons
+        self.charts = self.centralWidget().charts
         self.data_view = self.centralWidget().data_view
         self.options = self.centralWidget().options
         self.stack = self.centralWidget().stack
+
+    def create_dock(self):
+        dock = QDockWidget('Sensor Data', self)
+
+        wgt = QWidget()
+        gbox_layout = QVBoxLayout(wgt)
+        self.dock.setWidget(wgt)
+        for name in ('roll', 'pitch', 'heading', 'hyr', 'hxr', 'hzr', 'hy', 'hx', 'hz'):
+            label = QLabel("-")
+            label.setAlignment(QtCore.Qt.AlignCenter)
+            label.setMinimumWidth(80)
+            label.setStyleSheet("QLabel {font: 16px; background-color: white}")
+            label.setFrameShape(QFrame.StyledPanel)
+
+            layout = QHBoxLayout()
+            layout.addWidget(QLabel(name.capitalize()))
+            layout.addWidget(label)
+
+            gbox_layout.addLayout(layout)
+        gbox_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Expanding))
+        return dock
 
     def create_statusbar(self):
         # Statusbar
@@ -167,20 +165,25 @@ class MainWindow(QMainWindow):
         self.counter = QLabel("Rx: -")
         self.statusBar().addPermanentWidget(self.counter)
 
-    def create_menu(self):
-        def _action_rescan():
-            available = sensor.scan_ports()
+    def _action_rescan(self):
+        # TODO: Move to app
+        available = sensor.scan_ports()
+        if available:
             self.portbox.clear()
             self.portbox.addItems(available)
+            self.status.showMessage("Find ports", 1000)
+        else:
+            self.status.showMessage("No available port", 1000)
+
+    def create_menu(self):
 
         def _action_quit():
             QtCore.QCoreApplication.exit(0)
 
-
         menu = self.menuBar()
 
         file_menu = QMenu("&File", self)
-        file_menu.addAction("Rescan", _action_rescan)
+        file_menu.addAction("Rescan", self._action_rescan)
         file_menu.addSeparator()
         file_menu.addAction("Settings...", lambda: print("Settings..."))
         file_menu.addSeparator()
@@ -190,18 +193,19 @@ class MainWindow(QMainWindow):
         file_menu.addAction("Exit", _action_quit)
         menu.addMenu(file_menu)
 
+
     def create_toolbar(self):
         toolbar = self.addToolBar("File")
-        toolbar.setMovable(False)
+        #toolbar.setMovable(False)
 
-        self.buttons = {}
+        self.toolbar_buttons = {}
 
         # Start/Stop buttons
         self.modeButtonGroup = QButtonGroup()
         for key, icon, tooltip in (
-            ('start', 'assets/start-icon.png', 'connect and run'),
-            ('stop', 'assets/stop-red-icon.png', 'stop'),
-            ('pause', 'assets/pause-icon.png', 'pause')
+                ('start', 'assets/start-icon.png', 'connect and run'),
+                ('stop', 'assets/stop-red-icon.png', 'stop'),
+                ('pause', 'assets/pause-icon.png', 'pause')
         ):
             btn = QToolButton()
             btn.setObjectName(key)
@@ -213,19 +217,21 @@ class MainWindow(QMainWindow):
 
             self.modeButtonGroup.addButton(btn)
             toolbar.addWidget(btn)
-            self.buttons[key] = btn
+            self.toolbar_buttons[key] = btn
         toolbar.addSeparator()
 
         # Port box
         toolbar.addWidget(QLabel("Port:", self))
         self.portbox = QComboBox(self)
         toolbar.addWidget(self.portbox)
-        
+
         # Button find serial ports
         btn = QToolButton()
         btn.setIcon(QIcon("assets/update-icon.png"))
+        btn.setToolTip("Repeat search serial ports")
         toolbar.addWidget(btn)
-        self.buttons['rescan'] = btn
+        self.toolbar_buttons['rescan'] = btn
+        self.toolbar_buttons['rescan'].clicked.connect(self._action_rescan)
         toolbar.addSeparator()
 
         # Select number of samples
@@ -235,14 +241,15 @@ class MainWindow(QMainWindow):
         self.spin.setSingleStep(100)
         self.spin.setSuffix(" samples")
         self.spin.lineEdit().setReadOnly(True)
+        self.spin.setToolTip("Set x interfall for all charts")
         toolbar.addWidget(self.spin)
         toolbar.addSeparator()
 
         # Chart/Table view mode
         self.viewButtonGroup = QButtonGroup()
         for key, icon, tooltip in (
-            ("chart", "assets/charts.png", "Chart View"),
-            ("table", "assets/table.png", "Table View")
+                ("chart", "assets/charts.png", "Chart View"),
+                ("table", "assets/table.png", "Table View")
         ):
             btn = QToolButton()
             btn.setObjectName(key)
@@ -254,26 +261,41 @@ class MainWindow(QMainWindow):
 
             self.viewButtonGroup.addButton(btn)
             toolbar.addWidget(btn)
-            self.buttons[key] = btn
+            self.toolbar_buttons[key] = btn
+
+        btn = QToolButton()
+        btn.setIcon(QIcon('assets/compass-icon'))
+        toolbar.addWidget(btn)
+
         toolbar.addSeparator()
 
-        # Records
         btn = QToolButton()
         btn.setIcon(QIcon('assets/log-icon'))
         btn.setToolTip("Logging on/off")
         btn.setCheckable(True)
+        self.toolbar_buttons['log_on'] = btn
         toolbar.addWidget(btn)
-        self.buttons['log'] = btn
+
+
+        # Records bar
+        self.addToolBarBreak()
+        self.record_bar = record_bar = QToolBar()
+        record_bar.setMovable(False)
+        record_bar.setHidden(True)
+
+        self.addToolBar(QtCore.Qt.BottomToolBarArea, record_bar)
+
+        record_bar.addWidget(QLabel("Path: "))
 
         self.lineedit = QLineEdit()
         self.lineedit.setReadOnly(True)
-        self.lineedit.setDisabled(True)
-        toolbar.addWidget(self.lineedit)
+        self.lineedit.setText(os.path.join(ROOT, 'reports', 'log.txt' ) )
+        record_bar.addWidget(self.lineedit)
 
-        self.buttons['logpath'] = btn = QPushButton("...")
-        btn.setDisabled(True)
-        toolbar.addWidget(btn)
-        
+        self.toolbar_buttons['select_path'] = btn = QPushButton("...")
+        record_bar.addWidget(btn)
+
+
     def centre(self):
         """ This method aligned main window related center screen """
         frame_gm = self.frameGeometry()
@@ -283,55 +305,53 @@ class MainWindow(QMainWindow):
         self.move(frame_gm.topLeft())
 
 
-class Magnetic(MainWindow):
+class MagneticApp(MainWindow):
     app_title = "Magnetic Viewer - {0}"
 
     def __init__(self, data=None, title=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # NOTE: uncomment for prototype ui
-        # uic.loadUi('../magnetic/ui/magnetic_lab.ui', self)
         self.setupUi()
 
-        self.collection_start = False
+        # Start/Stop monitor sensor data
+        self.monitor_running = False
 
-        # Search available ports
+        # On/Off logging data
+        self.logging_enable = False
+
+        # Search available serial ports
         available_ports = sensor.scan_ports()
-        self.portbox.addItems(available_ports)
-        self.available = True
-
-        # If didn't find serial ports, then disabled start buttons
         if not available_ports:
             self.status.showMessage("No available ports")
-            self.buttons['connect'].setDisabled(True)
             for btn in self.modeButtonGroup.buttons():
-                 btn.setDisabled(True)
+                btn.setDisabled(True)
+        else:
+            self.portbox.addItems(available_ports)
 
-        # Set model
+        # Connecting model to consumers
         self.model = SensorDataModel()
         self.centralWidget().table_view.setModel(self.model)
 
         # Connecting signal/slot
-
-        # ...buttons
-        self.buttons["connect"].clicked.connect(self.on_connect)
-        self.buttons["clear"].clicked.connect(self.on_clear)
-        self.buttons["quit"].clicked.connect(self.on_quit)
+        # ...button
+        self.toolbar_buttons['log_on'].clicked.connect(self.turn_logging)
+        self.toolbar_buttons['select_path'].clicked.connect(self.on_select_path)
 
         # ...button group
         self.modeButtonGroup.buttonClicked[QAbstractButton].connect(self.on_run)
         self.viewButtonGroup.buttonClicked[QAbstractButton].connect(self.on_switch_view)
 
         # ...comboboxs
-        self.portbox.currentTextChanged[str].connect(self.on_switch_port)
-        self.spin.valueChanged[int].connect(self.on_change_interval)
+        self.spin.valueChanged[int].connect(self.on_set_chart_xinterval)
 
         # ...models
-        #self.model.rowsInserted.connect(self.centralWidget().chart_view.redraw)
+        #self.model.rowsInserted.connect(self.on_model_changed)
+
+    def on_model_changed(self):
+        print('On model changed')
 
     def timerEvent(self, QTimerEvent):
-        """ Handler timer event"""
-        time = QtCore.QTime().currentTime().toString()
+        """ Handler timer event, every 100ms"""
 
         # <1> Get data from sensor
         try:
@@ -352,12 +372,24 @@ class Magnetic(MainWindow):
         self.show_data(r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)
 
         # <5> Update plot
-        self.centralWidget().inclinometer_chart.update_plot(r,p)
-        self.centralWidget().heading_chart.update_plot(h)
+        self.charts['inclinometer'].update_plot(r,p)
+        self.charts['heading'].update_plot(h)
+        self.charts['magnitometer'].update_plot(hy, hx, hz)
+
+        # <6> Logging data
+        if self.logging_enable:
+            time = QtCore.QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz")
+            path = self.lineedit.text()
+            str_data = ",".join((str(x) for x in (time, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)))
+            str_data += '\n'
+            with open(path, 'a') as f:
+                f.write(str_data)
 
     def show_data(self, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz):
+        """ Show sensor data to data view"""
         fmt_value = '{0:.1f}'
 
+        # Indicator recieve message
         self.counter.setText("Rx: {}".format(self.model.rowCount()))
 
         self.data_view['roll'].setText(fmt_value.format(r))
@@ -378,24 +410,14 @@ class Magnetic(MainWindow):
             self.on_stop()
         elif name == 'pause':
             self.on_stop()
-            self.centralWidget().inclinometer_chart.set_time(200)
-
-    def on_connect(self):
-        self.collection_start = ~self.collection_start
-        if self.collection_start:
-            self.on_start()
-        else:
-            self.on_stop()
 
     def on_start(self):
-        if self.collection_start:
+        if self.monitor_running:
             return
 
-        self.on_clear()
-
-        self.status.showMessage("Running")
-        self.buttons["connect"].setText("Stop")
+        # Disable widgets
         self.portbox.setDisabled(True)
+        self.toolbar_buttons['select_path'].setDisabled(True)
 
         port = self.portbox.currentText()
         self.serobj = serobj = serial.Serial(port, timeout=0.1)
@@ -405,34 +427,35 @@ class Magnetic(MainWindow):
         self.t.start()
 
         self.timer_recieve = self.startTimer(100, timerType=QtCore.Qt.PreciseTimer)
-        self.collection_start = True
+
+        self.status.showMessage("Running")
+        self.monitor_running = True
 
     def on_stop(self):
-        if not self.collection_start:
+        if not self.monitor_running:
             return
 
         self.status.showMessage("Stopped")
-        self.buttons["connect"].setText("Start")
         self.portbox.setEnabled(True)
 
+        # Kill timer
         if self.timer_recieve:
             self.killTimer(self.timer_recieve)
             self.timer_recieve = None
 
+        # terminate thread
         self.sensor.terminate()
+        self.t.join(timeout=0.1)
+
+        # Close port
         self.serobj.close()
         del self.sensor
-        self.collection_start = False
 
-    def on_change_interval(self, interval):
-        self.centralWidget().inclinometer_chart.set_time(interval)
+        self.monitor_running = False
 
     def on_clear(self):
         self.model.reset()
         self.centralWidget().chart_view.clear_area()
-
-    def on_switch_port(self, port):
-        print(f'on_switch_port(): {port}')
 
     def on_switch_view(self, btn):
         if btn.objectName() == 'chart':
@@ -440,9 +463,33 @@ class Magnetic(MainWindow):
         else:
             self.stack.setCurrentIndex(1)
 
-    @staticmethod
-    def on_quit(self):
-        QtCore.QCoreApplication.exit(0)
+    def turn_logging(self):
+        ''' On/Off logging. If logging ON then bottombar visible '''
+        self.logging_enable = ~self.logging_enable
+
+        if self.logging_enable:
+            self.record_bar.setVisible(True)
+        else:
+            self.record_bar.setVisible(False)
+
+    def on_set_chart_xinterval(self, interval):
+        for chart in self.charts.values():
+            chart.set_xmax(interval)
+
+    def on_select_path(self):
+        ''' Select path to save log '''
+        if not os.path.exists(REPORT_PATH):
+            try:
+                os.mkdir(REPORT_PATH)
+            except OSError:
+                self.status.showMessage("Error creating path", 2000)
+
+        fname, _ = QFileDialog.getSaveFileName(
+            self, "Select Path", REPORT_PATH, "Log (*.log)"
+        )
+
+        if fname:
+            self.lineedit.setText(fname)
 
 
 def main():
@@ -454,7 +501,7 @@ def main():
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
         app.setWindowIcon(QIcon(':/rc/Interdit.ico'))
 
-    magnetic = Magnetic()
+    magnetic = MagneticApp()
     magnetic.centre()
     magnetic.show()
 
