@@ -355,7 +355,7 @@ class MagneticApp(MainWindow):
 
         # <1> Get data from sensor
         try:
-            data = [round(item, 1) for item in sensor.SENSOR_QUEUE.get(timeout=0.2)]
+            data = [round(item, 1) for item in sensor.SENSOR_QUEUE.get(timeout=0.05)]
         except queue.Empty:
             self.status.showMessage("No sensor data")
             return
@@ -426,7 +426,7 @@ class MagneticApp(MainWindow):
         self.t = threading.Thread(target=self.sensor.run, daemon=False)
         self.t.start()
 
-        self.timer_recieve = self.startTimer(100, timerType=QtCore.Qt.PreciseTimer)
+        self.timer_recieve = self.startTimer(110, timerType=QtCore.Qt.PreciseTimer)
 
         self.status.showMessage("Running")
         self.monitor_running = True
