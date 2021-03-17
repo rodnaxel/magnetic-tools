@@ -1,20 +1,47 @@
 import matplotlib
+
 matplotlib.use('Qt5Agg')
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 
+class ElipsoidPlot(FigureCanvas):
+    def __init__(self, parent=None, width=5, height=5, dpi=100, cursor_visible=False,
+                 title='', ylabel='', xlabel=''):
+        self.fig = fig = Figure(figsize=(width, height), dpi=dpi)
+        fig.suptitle(title, fontsize=10)
+
+        self.axes = fig.add_subplot(111)
+        self.axes.set_xlim(-50, 50)
+        self.axes.set_ylim(-50, 50)
+        self.axes.grid()
+        self.axes.scatter([1, 2, 3], [1, 2, 3])
+
+        super(ElipsoidPlot, self).__init__(fig)
+
+        self.ydata = []
+        self.xdata = []
+
+    def update_plot(self, x, y):
+        self.axes.cla()
+        self.ydata.append(y)
+        self.xdata.append(x)
+
+        self.axes.scatter(self.ydata, self.xdata)
+
+        self.draw()
+
+
 class TimePlot(FigureCanvas):
     xmax = 100
     xmin = 0
 
-    def __init__(self, parent=None, width=5, height=5, dpi=90, cursor_visible=False,
+    def __init__(self, parent=None, width=5, height=5, dpi=100, cursor_visible=False,
                  title='', ylabel='', xlabel=''):
-        
+
         self.fig = fig = Figure(figsize=(width, height), dpi=dpi)
         fig.suptitle(title, fontsize=10)
-
 
         self.axes = fig.add_subplot(111)
         self.axes.set_xlim(self.xmin, self.xmax)
@@ -25,6 +52,12 @@ class TimePlot(FigureCanvas):
         self.xdata = []
         self.tick = 0
 
+        # self.text = self.axes.text(102, 0, '*', color='b', bbox=dict(facecolor='white', alpha=0.5))
+        # self.text = self.axes.text(self.xmax+1, 0, '*')
+
+        self.text_values = []
+
+        # Cursor on/off
         if cursor_visible:
             self.cursor = Cursor(self.axes)
             fig.canvas.mpl_connect('motion_notify_event', self.cursor.on_mouse_move)
@@ -36,7 +69,11 @@ class TimePlot(FigureCanvas):
 
     def add(self, label):
         self.line, = self.axes.plot([], [], lw=1, label=label)
-        self.axes.legend()
+        self.legend = self.axes.legend()
+
+        txt = self.axes.text(self.xmax + 1, 0, '')
+        txt.set_color(self.legend.get_lines()[-1].get_color())
+        self.text_values.append(txt)
 
     def remove(self, label):
         pass
@@ -72,6 +109,10 @@ class TimePlot(FigureCanvas):
             ymin = ymin if min_ydatas > ymin else (min_ydatas - 1)
             ymax = ymax if max_ydatas < ymax else (max_ydatas + 1)
             self.axes.set_ylim(ymin, ymax)
+
+        for t, v in zip(self.text_values, ydatas):
+            t.set_text("{}".format(v))
+            t.set_position((self.xmax + 1, v))
 
         self.draw()
 

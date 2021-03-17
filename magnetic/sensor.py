@@ -5,6 +5,7 @@ from queue import Queue
 import serial
 import serial.tools.list_ports as tools
 
+
 def scan_ports():
 	ports = [port.device for port in tools.comports()]
 	return ports
@@ -112,7 +113,8 @@ class Sensor(object):
 					message += buf
 				else:
 					if pid == 112:
-						data = parse_dorient(message)
+						data = [pid]
+						data.extend(parse_dorient(message))
 						SENSOR_QUEUE.put(data)
 					start = 0
 					message = b''

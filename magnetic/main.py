@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import *
 
 import sensor
 from algorithms import to_horizont
-from chart.mpl_chart import SimplePlot, TimePlot
+from chart.mpl_chart import TimePlot
 from magnetic_viewer import SensorDataTable
 from model.sensormodel import SensorDataModel
 from util import get_arguments
@@ -56,20 +56,20 @@ class MagneticWidget(QDialog):
 
         # Options View
         self.options = {}
-        option_box = QGroupBox("Select option:")
-        option_layout = QHBoxLayout(option_box)
-        for name in ("dub horizont",):
+        option_box = QGroupBox("Apply algorithm:")
+        option_layout = QVBoxLayout(option_box)
+        for name in ("dub z", "dub soft-iron"):
             check = QCheckBox(name)
             check.setCheckState(False)
             option_layout.addWidget(check)
             self.options[name] = check
 
         # Layouts
-        left_layout = QVBoxLayout()
-        left_layout.setContentsMargins(10, 20, 10, 10)
-        left_layout.addWidget(gbox)
-        left_layout.addWidget(option_box)
-        left_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Expanding))
+        dataview_layout = QVBoxLayout()
+        dataview_layout.setContentsMargins(10, 20, 10, 10)
+        dataview_layout.addWidget(gbox)
+        dataview_layout.addWidget(option_box)
+        dataview_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Expanding))
 
         # Table/Graph View
         right_layout = QVBoxLayout()
@@ -78,8 +78,13 @@ class MagneticWidget(QDialog):
         self.stack = stack_layout = QStackedLayout()
 
         wgt = QWidget(self)
-        layout = QVBoxLayout(wgt)
-        #layout.setSpacing(0)
+        frame = QFrame(self)
+        frame.setFrameStyle(QFrame.Box | QFrame.Sunken)
+
+        # layout = QVBoxLayout(wgt)
+        layout = QVBoxLayout(frame)
+        # layout.setContentsMargins(0,0,0,0)
+        # layout.setSpacing(0)
 
         # Matplotlib backend
         self.charts = {}
@@ -99,7 +104,7 @@ class MagneticWidget(QDialog):
         chart.add("hz")
         layout.addWidget(chart)
 
-        stack_layout.addWidget(wgt)
+        stack_layout.addWidget(frame)
 
         self.table_view = SensorDataTable(self)
         stack_layout.addWidget(self.table_view)
@@ -108,7 +113,7 @@ class MagneticWidget(QDialog):
 
         # Central Layout
         centralLayout = QHBoxLayout(self)
-        centralLayout.addLayout(left_layout)
+        centralLayout.addLayout(dataview_layout)
         centralLayout.addLayout(right_layout, 2)
 
 
@@ -129,8 +134,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
         # Dock widgets
-        #self.dock = self.create_dock()
-        #self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
+        #self.create_dock()
 
         # Environment
         self.charts = self.centralWidget().charts
@@ -139,15 +143,18 @@ class MainWindow(QMainWindow):
         self.stack = self.centralWidget().stack
 
     def create_dock(self):
-        dock = QDockWidget('Sensor Data', self)
+        self.dock = dock = QDockWidget("Sensors", self)
 
         wgt = QWidget()
-        gbox_layout = QVBoxLayout(wgt)
-        self.dock.setWidget(wgt)
+        gbox_layout = QHBoxLayout(wgt)
+        dock.setWidget(wgt)
+        dock.setFloating(False)
+
         for name in ('roll', 'pitch', 'heading', 'hyr', 'hxr', 'hzr', 'hy', 'hx', 'hz'):
             label = QLabel("-")
             label.setAlignment(QtCore.Qt.AlignCenter)
             label.setMinimumWidth(80)
+            label.setMaximumHeight(40)
             label.setStyleSheet("QLabel {font: 16px; background-color: white}")
             label.setFrameShape(QFrame.StyledPanel)
 
@@ -157,7 +164,8 @@ class MainWindow(QMainWindow):
 
             gbox_layout.addLayout(layout)
         gbox_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Expanding))
-        return dock
+
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
 
     def create_statusbar(self):
         # Statusbar
@@ -178,10 +186,13 @@ class MainWindow(QMainWindow):
     def create_menu(self):
 
         def _action_quit():
+            #TODO: move to App
             QtCore.QCoreApplication.exit(0)
 
+        self.menus = {}
         menu = self.menuBar()
 
+        # File menu
         file_menu = QMenu("&File", self)
         file_menu.addAction("Rescan", self._action_rescan)
         file_menu.addSeparator()
@@ -192,11 +203,11 @@ class MainWindow(QMainWindow):
         file_menu.addSeparator()
         file_menu.addAction("Exit", _action_quit)
         menu.addMenu(file_menu)
-
+        self.menus['file'] = file_menu
 
     def create_toolbar(self):
         toolbar = self.addToolBar("File")
-        #toolbar.setMovable(False)
+        toolbar.setMovable(False)
 
         self.toolbar_buttons = {}
 
@@ -204,8 +215,7 @@ class MainWindow(QMainWindow):
         self.modeButtonGroup = QButtonGroup()
         for key, icon, tooltip in (
                 ('start', 'assets/start-icon.png', 'connect and run'),
-                ('stop', 'assets/stop-red-icon.png', 'stop'),
-                ('pause', 'assets/pause-icon.png', 'pause')
+                ('stop', 'assets/stop-red-icon.png', 'stop')
         ):
             btn = QToolButton()
             btn.setObjectName(key)
@@ -307,6 +317,7 @@ class MainWindow(QMainWindow):
 
 class MagneticApp(MainWindow):
     app_title = "Magnetic Viewer - {0}"
+    TIMEOUT = 110
 
     def __init__(self, data=None, title=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -359,14 +370,14 @@ class MagneticApp(MainWindow):
         except queue.Empty:
             self.status.showMessage("No sensor data")
             return
-        r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz = data
+        pid, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz = data
 
         # <2> Apply correction algorithms
-        if self.options['dub horizont'].checkState():
+        if self.options['dub z'].checkState():
             hy_raw, hx_raw, hz_raw = to_horizont(hy_raw, hx_raw, hz_raw, r, p)
 
         # <3> Append data to model
-        self.model.append_data((r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz))
+        self.model.append_data((p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz))
 
         # <4> Show to data view
         self.show_data(r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)
@@ -380,7 +391,7 @@ class MagneticApp(MainWindow):
         if self.logging_enable:
             time = QtCore.QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz")
             path = self.lineedit.text()
-            str_data = ",".join((str(x) for x in (time, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)))
+            str_data = ",".join((str(x) for x in (time, hex(pid), r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)))
             str_data += '\n'
             with open(path, 'a') as f:
                 f.write(str_data)
@@ -408,8 +419,6 @@ class MagneticApp(MainWindow):
             self.on_start()
         elif name == 'stop':
             self.on_stop()
-        elif name == 'pause':
-            self.on_stop()
 
     def on_start(self):
         if self.monitor_running:
@@ -418,15 +427,22 @@ class MagneticApp(MainWindow):
         # Disable widgets
         self.portbox.setDisabled(True)
         self.toolbar_buttons['select_path'].setDisabled(True)
+        self.toolbar_buttons['rescan'].setDisabled(True)
 
+        # ...disable action rescan
+        self.menus['file'].children()[1].setDisabled(True)
+
+        # Set selectable port to sensor
         port = self.portbox.currentText()
         self.serobj = serobj = serial.Serial(port, timeout=0.1)
         self.sensor = sensor.Sensor(serobj)
 
+        # Run recieve data to single thread
         self.t = threading.Thread(target=self.sensor.run, daemon=False)
         self.t.start()
 
-        self.timer_recieve = self.startTimer(110, timerType=QtCore.Qt.PreciseTimer)
+        # Run timer
+        self.timer_recieve = self.startTimer(self.TIMEOUT, timerType=QtCore.Qt.PreciseTimer)
 
         self.status.showMessage("Running")
         self.monitor_running = True
@@ -436,7 +452,13 @@ class MagneticApp(MainWindow):
             return
 
         self.status.showMessage("Stopped")
+
+        # Enable widgets
         self.portbox.setEnabled(True)
+        self.toolbar_buttons['rescan'].setEnabled(True)
+
+        # ...enable action rescan
+        self.menus['file'].children()[1].setEnabled(True)
 
         # Kill timer
         if self.timer_recieve:
