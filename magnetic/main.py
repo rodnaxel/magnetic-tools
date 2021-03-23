@@ -317,7 +317,8 @@ class MainWindow(QMainWindow):
 
 class MagneticApp(MainWindow):
     app_title = "Magnetic Viewer - {0}"
-    TIMEOUT = 110
+    TIMEOUT = 100
+    TIMEOUT_QUEUE = 0.05
 
     def __init__(self, data=None, title=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -366,7 +367,7 @@ class MagneticApp(MainWindow):
 
         # <1> Get data from sensor
         try:
-            data = [round(item, 1) for item in sensor.SENSOR_QUEUE.get(timeout=0.05)]
+            data = [round(item, 1) for item in sensor.SENSOR_QUEUE.get(timeout=self.TIMEOUT_QUEUE)]
         except queue.Empty:
             self.status.showMessage("No sensor data")
             return
@@ -393,6 +394,7 @@ class MagneticApp(MainWindow):
             path = self.lineedit.text()
             str_data = ",".join((str(x) for x in (time, hex(pid), r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)))
             str_data += '\n'
+            self.status.showMessage(time)
             with open(path, 'a') as f:
                 f.write(str_data)
 

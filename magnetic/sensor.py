@@ -87,6 +87,7 @@ class Sensor(object):
 				buf = self.bus.read(1)
 			except serial.SerialException:
 				SENSOR_QUEUE.put(object())
+
 			if start == 0:
 				if buf == self.SOP1:
 					start += 1

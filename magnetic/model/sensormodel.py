@@ -77,3 +77,11 @@ class SensorDataModel(QAbstractTableModel):
         self.beginResetModel()
         self._data = []
         self.endResetModel()
+
+
+class SensorFieldModel(SensorDataModel):
+    section_names = ("Hx", "Hy", "Hxc", "Hyc" )
+    cols = len(section_names)
+    
+    def __init__(self, data: list = None):
+        super(SensorFieldModel, self).__init__(data)

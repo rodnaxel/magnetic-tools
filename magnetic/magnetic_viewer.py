@@ -6,7 +6,8 @@ from PyQt5.QtWidgets import QTableView, QHeaderView, QMainWindow, QWidget, QActi
 
 from algorithms import Algorithm
 from chart.qt_charts import EllipsoidGraph
-from model.sensormodel import SensorDataModel
+from chart.mpl_chart import EllipsoidPlot
+from model.sensormodel import SensorDataModel, SensorFieldModel
 from util import from_csv, to_csv, get_arguments
 
 
@@ -82,13 +83,14 @@ class Ui(QMainWindow):
 		splitter.addWidget(self.table)
 
 		# Chart
-		self.chartwidget = EllipsoidGraph()
-		size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-		size_policy.setHorizontalStretch(1)
-		size_policy.setVerticalStretch(0)
-		size_policy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-		self.chartwidget.setSizePolicy(size_policy)
-		self.chartwidget.setMaximumWidth(self.chartwidget.maximumHeight())
+		# self.chartwidget = EllipsoidGraph()
+		self.chartwidget = EllipsoidPlot()
+		# size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+		# size_policy.setHorizontalStretch(1)
+		# size_policy.setVerticalStretch(0)
+		# size_policy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
+		# self.chartwidget.setSizePolicy(size_policy)
+		# self.chartwidget.setMaximumWidth(self.chartwidget.maximumHeight())
 		splitter.addWidget(self.chartwidget)
 
 		# Layout
@@ -116,11 +118,9 @@ class MagneticViewer(Ui):
 		
 		self.setWindowTitle(self.app_title.format(title))
 		
-		self.model = SensorDataModel()
+		self.model = SensorFieldModel()
 		self.table.setModel(self.model)
-		self.chartwidget.set_model(self.model)
-		# self.chartwidget.add_graph("Initial Magniude", xcol=0, ycol=1)
-		
+
 		self.buttons['add'].clicked.connect(self.add_xy)
 		self.buttons['clear'].clicked.connect(self.delete_all)
 		self.buttons['calibrate'].clicked.connect(self.calibrate)
@@ -130,13 +130,14 @@ class MagneticViewer(Ui):
 	
 	def delete_all(self):
 		self.model.reset()
-		self.chartwidget.clear_area()
+		self.chartwidget.clear()
 		self.setWindowTitle(self.app_title)
 	
 	def calibrate(self):
 		if not self.model.fetch_data():
 			self.status.showMessage("No loaded data")
 			return
+
 		dataset_initial = self.model.fetch_data()
 		maxdub = Algorithm(dataset_initial)
 		dataset_correction = [maxdub.correct(x, y) for (x, y) in dataset_initial]
@@ -144,8 +145,17 @@ class MagneticViewer(Ui):
 		union_ = [(x, y, round(xc, 1), round(yc, 1)) for (x, y), (xc, yc) in zip(dataset_initial, dataset_correction)]
 		self.model.reset()
 		self.model.load_data(union_)
-		self.chartwidget.add_graph(name="Correction Magnitude", model=self.model, xcol=2, ycol=3)
-	
+		# self.chartwidget.add_graph(name="Correction Magnitude", model=self.model, xcol=2, ycol=3)
+		#print(self.model.fetch_data())
+
+		xdata = []
+		ydata = []
+		for (_, _, x, y) in self.model.fetch_data():
+			xdata.append(x)
+			ydata.append(y)
+		self.chartwidget.set_data(xdata, ydata)
+
+
 	def action_open(self):
 		fname, _ = QFileDialog.getOpenFileName(
 			self,
@@ -160,7 +170,16 @@ class MagneticViewer(Ui):
 			self.setWindowTitle(self.app_title.format(fname))
 			self.model.reset()
 			self.model.load_data(dataset)
-			self.chartwidget.add_graph("Initial", self.model, xcol=0, ycol=1)
+			#self.chartwidget.add_graph("Initial", self.model, xcol=0, ycol=1)
+
+			# Fetch data
+			xdata = []
+			ydata = []
+			for (x, y) in self.model.fetch_data():
+				xdata.append(x)
+				ydata.append(y)
+			self.chartwidget.set_data(xdata, ydata)
+
 		else:
 			self.status.showMessage(f"No load data")
 	

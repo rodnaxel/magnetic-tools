@@ -6,8 +6,9 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 
-class ElipsoidPlot(FigureCanvas):
-    def __init__(self, parent=None, width=5, height=5, dpi=100, cursor_visible=False,
+class EllipsoidPlot(FigureCanvas):
+    def __init__(self, parent=None, width=5, height=5, dpi=100,
+                 cursor_visible=False,
                  title='', ylabel='', xlabel=''):
         self.fig = fig = Figure(figsize=(width, height), dpi=dpi)
         fig.suptitle(title, fontsize=10)
@@ -16,20 +17,22 @@ class ElipsoidPlot(FigureCanvas):
         self.axes.set_xlim(-50, 50)
         self.axes.set_ylim(-50, 50)
         self.axes.grid()
-        self.axes.scatter([1, 2, 3], [1, 2, 3])
 
-        super(ElipsoidPlot, self).__init__(fig)
+        super(EllipsoidPlot, self).__init__(fig)
 
-        self.ydata = []
-        self.xdata = []
+    def set_data(self, xdata, ydata):
+        self.axes.plot(xdata, ydata, marker='.', markeredgewidth=0.7, linewidth=0.5)
+        self.draw()
+
+    def clear(self):
+        self.axes.cla()
 
     def update_plot(self, x, y):
         self.axes.cla()
         self.ydata.append(y)
         self.xdata.append(x)
 
-        self.axes.scatter(self.ydata, self.xdata)
-
+        self.axes.scatter(self.xdata, self.ydata)
         self.draw()
 
 
@@ -82,6 +85,7 @@ class TimePlot(FigureCanvas):
         self.axes.cla()
 
     def update_plot(self, *ydatas):
+
         # Set new data
         if self.tick <= self.xmax:
             # update x
