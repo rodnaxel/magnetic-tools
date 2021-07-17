@@ -101,3 +101,17 @@ class Algorithm:
 		x0 = x - self.x_offset
 		y0 = y - self.y_offset
 		return x0, y0
+
+
+
+class Compensate:
+	def __init__(self, initial_heading):
+		self.initial_heading
+
+	def update(self, data):
+		heading = 0
+		
+
+
+
+	
