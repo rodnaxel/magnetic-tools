@@ -14,7 +14,7 @@ from algorithms import to_horizont
 from chart.mpl_chart import TimePlot
 from magnetic_viewer import SensorDataTable
 from model.sensormodel import SensorDataModel
-from util import get_arguments, to_csv
+from util import get_arguments
 
 # For run in Raspberry Pi
 if platform.machine() == "armv7l":
@@ -36,7 +36,7 @@ class MagneticWidget(QDialog):
 
         # Data View
         self.data_view = {}
-        #gbox = QGroupBox("Sensor Data" + ":")
+        # gbox = QGroupBox("Sensor Data" + ":")
         gbox = QWidget()
         gbox_layout = QVBoxLayout(gbox)
 
@@ -280,22 +280,22 @@ class MainWindow(QMainWindow):
 
         btn = QToolButton()
         btn.setIcon(QIcon('assets/compass-icon'))
-        self.toolbar_buttons['compensate']=btn
+        btn.setCheckable(True)
+        self.toolbar_buttons['compensate'] = btn
         toolbar.addWidget(btn)
 
         toolbar.addSeparator()
 
-        btn=QToolButton()
+        btn = QToolButton()
         btn.setIcon(QIcon('assets/log-icon'))
         btn.setToolTip("Logging on/off")
         btn.setCheckable(True)
-        self.toolbar_buttons['log_on']=btn
+        self.toolbar_buttons['log_on'] = btn
         toolbar.addWidget(btn)
-
 
         # Records bar
         self.addToolBarBreak()
-        self.record_bar=record_bar=QToolBar()
+        self.record_bar = record_bar = QToolBar()
         record_bar.setMovable(False)
         record_bar.setHidden(True)
 
@@ -303,21 +303,20 @@ class MainWindow(QMainWindow):
 
         record_bar.addWidget(QLabel("Path: "))
 
-        self.lineedit=QLineEdit()
+        self.lineedit = QLineEdit()
         self.lineedit.setReadOnly(True)
         self.lineedit.setText(os.path.join(ROOT, 'reports', 'log.csv'))
         record_bar.addWidget(self.lineedit)
 
-        self.toolbar_buttons['select_path']=btn=QPushButton("...")
+        self.toolbar_buttons['select_path'] = btn = QPushButton("...")
         record_bar.addWidget(btn)
-
 
     def centre(self):
         """ This method aligned main window related center screen """
-        frame_gm=self.frameGeometry()
-        screen=QApplication.desktop().screenNumber(
+        frame_gm = self.frameGeometry()
+        screen = QApplication.desktop().screenNumber(
             QApplication.desktop().cursor().pos())
-        center_point=QApplication.desktop().screenGeometry(screen).center()
+        center_point = QApplication.desktop().screenGeometry(screen).center()
         frame_gm.moveCenter(center_point)
         self.move(frame_gm.topLeft())
 
@@ -336,14 +335,14 @@ class MagneticApp(MainWindow):
         self.monitor_running = False
 
         # Start/Stop compensate
-        self.compensate = False 
+        self.compensate = False
         self.initial_heading = None
 
         # On/Off logging data
         self.logging_enable = False
 
         # Search available serial ports
-        available_ports=sensor.scan_ports()
+        available_ports = sensor.scan_ports()
         if not available_ports:
             self.status.showMessage("No available ports")
             for btn in self.modeButtonGroup.buttons():
@@ -352,7 +351,7 @@ class MagneticApp(MainWindow):
             self.portbox.addItems(available_ports)
 
         # Connecting model to consumers
-        self.model=SensorDataModel()
+        self.model = SensorDataModel()
         self.centralWidget().table_view.setModel(self.model)
 
         # Connecting signal/slot
@@ -387,11 +386,11 @@ class MagneticApp(MainWindow):
         except queue.Empty:
             self.status.showMessage("No sensor data")
             return
-        pid, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz=data
+        pid, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz = data
 
         # <2> Apply correction algorithms
         if self.options['dub z'].checkState():
-            hy_raw, hx_raw, hz_raw=to_horizont(hy_raw, hx_raw, hz_raw, r, p)
+            hy_raw, hx_raw, hz_raw = to_horizont(hy_raw, hx_raw, hz_raw, r, p)
 
         # <3> Append data to model
         self.model.append_data((p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz))
@@ -400,9 +399,9 @@ class MagneticApp(MainWindow):
         self.show_data(r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)
 
         # <5> Update plot
-        self.charts['inclinometer'].update_plot(r, p)
-        self.charts['heading'].update_plot(h)
-        self.charts['magnitometer'].update_plot(hy, hx, hz)
+        #self.charts['inclinometer'].update_plot(r, p)
+        #self.charts['heading'].update_plot(h)
+        #self.charts['magnitometer'].update_plot(hy, hx, hz)
 
         # <6> Logging data
         if self.logging_enable:
@@ -413,20 +412,20 @@ class MagneticApp(MainWindow):
             self.status.showMessage(time)
             with open(path, 'a') as f:
                 f.write(str_data)
-        
+
         # <7> Compensate mode
         if self.compensate:
             time = QtCore.QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz")
             path = self.lineedit.text()
-            str_data = ",".join((str(x) for x in (time, hex(pid), r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)))
+            #str_data = ",".join((str(x) for x in (time, hex(pid), r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)))
+            str_data = ",".join((str(x) for x in (hy, hx)))
             str_data += '\n'
             with open(path, 'a') as f:
                 f.write(str_data)
-            
 
     def show_data(self, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz):
         """ Show sensor data to data view"""
-        fmt_value='{0:.1f}'
+        fmt_value = '{0:.1f}'
 
         # Indicator recieve message
         self.counter.setText("Rx: {}".format(self.model.rowCount()))
@@ -442,7 +441,7 @@ class MagneticApp(MainWindow):
         self.data_view['hz'].setText(fmt_value.format(hz))
 
     def on_run(self, btn):
-        name=btn.objectName()
+        name = btn.objectName()
         if name == 'start':
             self.on_start()
         elif name == 'stop':
@@ -461,20 +460,20 @@ class MagneticApp(MainWindow):
         self.menus['file'].children()[1].setDisabled(True)
 
         # Set selectable port to sensor
-        port=self.portbox.currentText()
-        self.serobj=serobj=serial.Serial(port, timeout=0.1)
-        self.sensor=sensor.Sensor(serobj)
+        port = self.portbox.currentText()
+        self.serobj = serobj = serial.Serial(port, timeout=0.1)
+        self.sensor = sensor.Sensor(serobj)
 
         # Run recieve data to single thread
-        self.t=threading.Thread(target=self.sensor.run, daemon=False)
+        self.t = threading.Thread(target=self.sensor.run, daemon=False)
         self.t.start()
 
         # Run timer
-        self.timer_recieve=self.startTimer(
+        self.timer_recieve = self.startTimer(
             self.TIMEOUT, timerType=QtCore.Qt.PreciseTimer)
 
         self.status.showMessage("Running")
-        self.monitor_running=True
+        self.monitor_running = True
 
     def on_stop(self):
         if not self.monitor_running:
@@ -492,7 +491,7 @@ class MagneticApp(MainWindow):
         # Kill timer
         if self.timer_recieve:
             self.killTimer(self.timer_recieve)
-            self.timer_recieve=None
+            self.timer_recieve = None
 
         # terminate thread
         self.sensor.terminate()
@@ -502,7 +501,7 @@ class MagneticApp(MainWindow):
         self.serobj.close()
         del self.sensor
 
-        self.monitor_running=False
+        self.monitor_running = False
 
     def on_clear(self):
         self.model.reset()
@@ -517,9 +516,11 @@ class MagneticApp(MainWindow):
     def on_compensate(self):
         if not self.compensate:
             self.compensate = True
+            self.toolbar_buttons['compensate'].setChecked(True)
             self.status.showMessage('Start compensate', 1000)
         else:
             self.compensate = False
+            self.toolbar_buttons['compensate'].setChecked(False)
             self.status.showMessage('Stop compensate', 1000)
         """
         По нажатию кнопки:
@@ -530,7 +531,7 @@ class MagneticApp(MainWindow):
 
     def turn_logging(self):
         ''' On/Off logging. If logging ON then bottombar visible '''
-        self.logging_enable=~self.logging_enable
+        self.logging_enable = ~self.logging_enable
 
         if self.logging_enable:
             self.record_bar.setVisible(True)
@@ -549,7 +550,7 @@ class MagneticApp(MainWindow):
             except OSError:
                 self.status.showMessage("Error creating path", 2000)
 
-        fname, _=QFileDialog.getSaveFileName(
+        fname, _ = QFileDialog.getSaveFileName(
             self, "Select Path", REPORT_PATH, "Log (*.log)"
         )
 
@@ -558,15 +559,15 @@ class MagneticApp(MainWindow):
 
 
 def main():
-    app=QApplication(sys.argv)
+    app = QApplication(sys.argv)
 
     if sys.platform == 'win32':
         import ctypes
-        myappid=u'navi-dals.magnetic-tools.proxy.001'  # arbitrary string
+        myappid = u'navi-dals.magnetic-tools.proxy.001'  # arbitrary string
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
         app.setWindowIcon(QIcon(':/rc/Interdit.ico'))
 
-    magnetic=MagneticApp()
+    magnetic = MagneticApp()
     magnetic.centre()
     magnetic.show()
 
@@ -574,5 +575,5 @@ def main():
 
 
 if __name__ == '__main__':
-    args=get_arguments()
+    args = get_arguments()
     main()
