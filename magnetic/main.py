@@ -36,7 +36,8 @@ class MagneticWidget(QDialog):
 
         # Data View
         self.data_view = {}
-        gbox = QGroupBox("Sensor Data" + ":")
+        #gbox = QGroupBox("Sensor Data" + ":")
+        gbox = QWidget()
         gbox_layout = QVBoxLayout(gbox)
 
         for name in ('roll', 'pitch', 'heading', 'hyr', 'hxr', 'hzr', 'hy', 'hx', 'hz'):
@@ -304,7 +305,7 @@ class MainWindow(QMainWindow):
 
         self.lineedit=QLineEdit()
         self.lineedit.setReadOnly(True)
-        self.lineedit.setText(os.path.join(ROOT, 'reports', 'log.txt'))
+        self.lineedit.setText(os.path.join(ROOT, 'reports', 'log.csv'))
         record_bar.addWidget(self.lineedit)
 
         self.toolbar_buttons['select_path']=btn=QPushButton("...")
@@ -514,25 +515,18 @@ class MagneticApp(MainWindow):
             self.stack.setCurrentIndex(1)
 
     def on_compensate(self):
-        heading = self.data_view['heading'].text()
-
         if not self.compensate:
             self.compensate = True
-            #self.initial_heading = int(self.data_view['heading'].text())
-            print("Start compensate with ", self.initial_heading)
+            self.status.showMessage('Start compensate', 1000)
         else:
             self.compensate = False
-            print("Stop compensate")
-
-        
+            self.status.showMessage('Stop compensate', 1000)
         """
         По нажатию кнопки:
             установить флаг калибровки
             запомнить текущий курс
             включить логирование данных    
         """
-
-        print(heading)
 
     def turn_logging(self):
         ''' On/Off logging. If logging ON then bottombar visible '''
