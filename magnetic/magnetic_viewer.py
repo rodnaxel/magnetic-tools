@@ -1,25 +1,14 @@
 import sys
 
 from PyQt5 import QtCore
-from PyQt5.QtWidgets import QTableView, QHeaderView, QMainWindow, QWidget, QAction, QHBoxLayout, QLabel, QDoubleSpinBox, \
+from PyQt5.QtWidgets import QMainWindow, QWidget, QAction, QHBoxLayout, QLabel, QDoubleSpinBox, \
 	QSpacerItem, QSizePolicy, QPushButton, QSplitter, QVBoxLayout, QFileDialog, QApplication
 
 from algorithms import Algorithm
-from chart.qt_charts import EllipsoidGraph
 from chart.mpl_chart import EllipsoidPlot
-from model.sensormodel import SensorDataModel, SensorFieldModel
+from models import SensorFieldModel
 from util import from_csv, to_csv, get_arguments
-
-
-class SensorDataTable(QTableView):
-	def __init__(self, parent):
-		super().__init__(parent)
-		
-		self.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-		self.horizontalHeader().setSectionsMovable(True)
-		self.horizontalHeader().setStretchLastSection(False)
-		self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-		self.verticalHeader().setDefaultAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignJustify)
+from views import SensorDataTable
 
 
 class Ui(QMainWindow):
@@ -157,6 +146,9 @@ class MagneticViewer(Ui):
 
 
 	def action_open(self):
+		"""
+		Функция загрузки датасет составляющих магнитного поля B,C из csv-файл
+		"""
 		fname, _ = QFileDialog.getOpenFileName(
 			self,
 			"Open",
@@ -168,9 +160,9 @@ class MagneticViewer(Ui):
 			dataset = from_csv(fname)
 			self.status.showMessage(f"Load data", 1000)
 			self.setWindowTitle(self.app_title.format(fname))
+
 			self.model.reset()
 			self.model.load_data(dataset)
-			#self.chartwidget.add_graph("Initial", self.model, xcol=0, ycol=1)
 
 			# Fetch data
 			xdata = []

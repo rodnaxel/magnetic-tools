@@ -12,8 +12,8 @@ from PyQt5.QtWidgets import *
 import sensor
 from algorithms import to_horizont
 from chart.mpl_chart import TimePlot
-from magnetic_viewer import SensorDataTable
-from model.sensormodel import SensorDataModel
+from views import SensorDataTable
+from model.models import SensorDataModel
 from util import get_arguments
 
 # For run in Raspberry Pi
@@ -31,13 +31,17 @@ REPORT_PATH = os.path.join(ROOT, 'reports')
 
 
 class MagneticWidget(QDialog):
+    """
+    Виджет логгера
+    """
     def __init__(self, parent, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Data View
         self.data_view = {}
-        # gbox = QGroupBox("Sensor Data" + ":")
-        gbox = QWidget()
+        #gbox = QGroupBox("Sensor Data" + ":")
+        gbox = QFrame(self)
+        gbox.setFrameStyle(QFrame.Box | QFrame.Sunken)
         gbox_layout = QVBoxLayout(gbox)
 
         for name in ('roll', 'pitch', 'heading', 'hyr', 'hxr', 'hzr', 'hy', 'hx', 'hz'):
@@ -67,7 +71,7 @@ class MagneticWidget(QDialog):
 
         # Layouts
         dataview_layout = QVBoxLayout()
-        dataview_layout.setContentsMargins(10, 20, 10, 10)
+        dataview_layout.setContentsMargins(0, 0, 0, 0)
         dataview_layout.addWidget(gbox)
         dataview_layout.addWidget(option_box)
         dataview_layout.addSpacerItem(QSpacerItem(
@@ -79,28 +83,31 @@ class MagneticWidget(QDialog):
         # ...Chart / Table
         self.stack = stack_layout = QStackedLayout()
 
-        wgt = QWidget(self)
-        frame = QFrame(self)
+        self.frame = frame = QFrame(self)
         frame.setFrameStyle(QFrame.Box | QFrame.Sunken)
 
         # layout = QVBoxLayout(wgt)
         layout = QVBoxLayout(frame)
-        # layout.setContentsMargins(0,0,0,0)
+        #layout.setContentsMargins(0,0,0,0)
         # layout.setSpacing(0)
 
-        # Matplotlib backend
+
+        # Графики
         self.charts = {}
 
+        # График курса
         self.charts['heading'] = chart = TimePlot(self, title='Heading')
         chart.add("heading")
         layout.addWidget(chart)
 
+        # График крена и диффирента
         self.charts['inclinometer'] = chart = TimePlot(
             self, title='Inclinometer')
         chart.add("roll")
         chart.add("pitch")
         layout.addWidget(chart)
 
+        # График трех составляющих магнитного поля (Hy, Hx, Hz)
         self.charts['magnitometer'] = chart = TimePlot(
             self, title='Magnitometer')
         chart.add("hy")
@@ -110,6 +117,7 @@ class MagneticWidget(QDialog):
 
         stack_layout.addWidget(frame)
 
+        # Таблица данных
         self.table_view = SensorDataTable(self)
         stack_layout.addWidget(self.table_view)
 
@@ -138,13 +146,15 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
         # Dock widgets
-        # self.create_dock()
+        #self.create_dock()
 
         # Environment
         self.charts = self.centralWidget().charts
         self.data_view = self.centralWidget().data_view
+        self.table_view = self.centralWidget().table_view
         self.options = self.centralWidget().options
         self.stack = self.centralWidget().stack
+        self.frame = self.centralWidget().frame
 
     def create_dock(self):
         self.dock = dock = QDockWidget("Sensors", self)
@@ -371,7 +381,7 @@ class MagneticApp(MainWindow):
         self.spin.valueChanged[int].connect(self.on_set_chart_xinterval)
 
         # ...models
-        # self.model.rowsInserted.connect(self.on_model_changed)
+        #self.model.rowsInserted.connect(self.on_model_changed)
 
     def on_model_changed(self):
         print('On model changed')
@@ -382,7 +392,6 @@ class MagneticApp(MainWindow):
         # <1> Get data from sensor
         try:
             data = [round(item, 1) for item in sensor.SENSOR_QUEUE.get(timeout=self.TIMEOUT_QUEUE)]
-
         except queue.Empty:
             self.status.showMessage("No sensor data")
             return
@@ -393,7 +402,7 @@ class MagneticApp(MainWindow):
             hy_raw, hx_raw, hz_raw = to_horizont(hy_raw, hx_raw, hz_raw, r, p)
 
         # <3> Append data to model
-        self.model.append_data((p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz))
+        self.model.append_data((r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz))
 
         # <4> Show to data view
         self.show_data(r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)
@@ -514,6 +523,8 @@ class MagneticApp(MainWindow):
             self.stack.setCurrentIndex(1)
 
     def on_compensate(self):
+
+
         if not self.compensate:
             self.compensate = True
             self.toolbar_buttons['compensate'].setChecked(True)
