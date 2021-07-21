@@ -5,6 +5,7 @@ import sys
 import threading
 
 import serial
+
 from PyQt5 import QtCore
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -12,9 +13,11 @@ from PyQt5.QtWidgets import *
 import sensor
 from algorithms import to_horizont
 from chart.mpl_chart import TimePlot
+from models import SensorDataModel
 from views import SensorDataTable
-from model.models import SensorDataModel
 from util import get_arguments
+
+from calibrate import Calibrate
 
 # For run in Raspberry Pi
 if platform.machine() == "armv7l":
@@ -424,13 +427,14 @@ class MagneticApp(MainWindow):
 
         # <7> Compensate mode
         if self.compensate:
-            time = QtCore.QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz")
-            path = self.lineedit.text()
-            #str_data = ",".join((str(x) for x in (time, hex(pid), r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)))
-            str_data = ",".join((str(x) for x in (hy, hx)))
-            str_data += '\n'
-            with open(path, 'a') as f:
-                f.write(str_data)
+            self.calibrate.update(data)
+            # time = QtCore.QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz")
+            # path = self.lineedit.text()
+            # #str_data = ",".join((str(x) for x in (time, hex(pid), r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)))
+            # str_data = ",".join((str(x) for x in (hy, hx)))
+            # str_data += '\n'
+            # with open(path, 'a') as f:
+            #     f.write(str_data)
 
     def show_data(self, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz):
         """ Show sensor data to data view"""
@@ -523,23 +527,20 @@ class MagneticApp(MainWindow):
             self.stack.setCurrentIndex(1)
 
     def on_compensate(self):
-
+        """ Обработка нажатие кнопки <Компенсация>"""
 
         if not self.compensate:
             self.compensate = True
             self.toolbar_buttons['compensate'].setChecked(True)
             self.status.showMessage('Start compensate', 1000)
+            self.calibrate = Calibrate()
         else:
             self.compensate = False
             self.toolbar_buttons['compensate'].setChecked(False)
             self.status.showMessage('Stop compensate', 1000)
-        """
-        По нажатию кнопки:
-            установить флаг калибровки
-            запомнить текущий курс
-            включить логирование данных    
-        """
-
+            self.calibrate.compute()
+            del self.calibrate
+    
     def turn_logging(self):
         ''' On/Off logging. If logging ON then bottombar visible '''
         self.logging_enable = ~self.logging_enable
