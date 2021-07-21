@@ -33,8 +33,8 @@ def from_csv(fname):
 		return [row for row in reader]
 
 
-def to_csv(fname, data):
-	with open(fname, "w") as f:
+def to_csv(fname, data, mode='w'):
+	with open(fname, mode) as f:
 		writer = csv.writer(f, delimiter=',')
 		writer.writerows(data)
 

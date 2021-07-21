@@ -24,6 +24,7 @@ class Algorithm:
     """ This class used to correct raw magnetic field B,C"""
 
     def __init__(self, fields):
+        # FIXME: Необходимо принимать непустой список
         self.ds = fields.copy()
         self._compute()
 
@@ -70,10 +71,12 @@ class Algorithm:
         )
 
         # <5> Caclulate rotate side and angle phi <\>
+        #FIXME: Обработать ситуацию если (h_max[1] * h_max[0]) == 0
         if (h_max[1] * h_max[0]) > 0:
             phi = math.atan(h_max[1] / h_max[0])
             self.clockwise = clockwise = True
         else:
+            print(h_max[1], h_max[0])
             phi = -math.atan(h_max[1] / h_max[0])
             self.clockwise = clockwise = False
         self.phi_degree = phi * (180.0 / math.pi)

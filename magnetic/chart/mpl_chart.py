@@ -6,10 +6,11 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 
-class EllipsoidPlot(FigureCanvas):
+class XYPlot(FigureCanvas):
     def __init__(self, parent=None, width=5, height=5, dpi=100,
                  cursor_visible=False,
                  title='', ylabel='', xlabel=''):
+
         self.fig = fig = Figure(figsize=(width, height), dpi=dpi)
         fig.suptitle(title, fontsize=10)
 
@@ -18,10 +19,14 @@ class EllipsoidPlot(FigureCanvas):
         self.axes.set_ylim(-50, 50)
         self.axes.grid()
 
-        super(EllipsoidPlot, self).__init__(fig)
+
+        self.xdata = []
+        self.ydata = []
+
+        super(XYPlot, self).__init__(fig)
 
     def set_data(self, xdata, ydata):
-        self.axes.plot(xdata, ydata, marker='.', markeredgewidth=0.7, linewidth=0.5)
+        self.axes.plot(xdata, ydata, marker='.', markeredgewidth=0.2, linewidth=0.5)
         self.draw()
 
     def clear(self):
@@ -29,10 +34,14 @@ class EllipsoidPlot(FigureCanvas):
 
     def update_plot(self, x, y):
         self.axes.cla()
+        self.axes.set_xlim(-50, 50)
+        self.axes.set_ylim(-50, 50)
+        self.axes.grid()
+
         self.ydata.append(y)
         self.xdata.append(x)
 
-        self.axes.scatter(self.xdata, self.ydata)
+        self.axes.scatter(self.xdata, self.ydata, marker='.', linewidths=0.2)
         self.draw()
 
 
@@ -70,7 +79,11 @@ class TimePlot(FigureCanvas):
         self.axes.set_xlim(0, self.xmax)
         self.draw()
 
-    def add(self, label):
+    def add_lines(self, labels):
+        for label in labels:
+            self.add_line(label)
+
+    def add_line(self, label):
         self.line, = self.axes.plot([], [], lw=1, label=label)
         self.legend = self.axes.legend()
 

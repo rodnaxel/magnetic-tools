@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QAction, QHBoxLayout, QLabel, 
 	QSpacerItem, QSizePolicy, QPushButton, QSplitter, QVBoxLayout, QFileDialog, QApplication
 
 from algorithms import Algorithm
-from chart.mpl_chart import EllipsoidPlot
+from chart.mpl_chart import XYPlot
 from models import SensorFieldModel
 from util import from_csv, to_csv, get_arguments
 from views import SensorDataTable
@@ -22,6 +22,7 @@ class Ui(QMainWindow):
 		self.setMinimumSize(800, 600)
 		
 		# Widgets
+
 		centralWidget = QWidget(self)
 		
 		# Menu
@@ -73,7 +74,7 @@ class Ui(QMainWindow):
 
 		# Chart
 		# self.chartwidget = EllipsoidGraph()
-		self.chartwidget = EllipsoidPlot()
+		self.chartwidget = XYPlot()
 		# size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 		# size_policy.setHorizontalStretch(1)
 		# size_policy.setVerticalStretch(0)

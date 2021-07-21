@@ -5,19 +5,17 @@ import sys
 import threading
 
 import serial
-
 from PyQt5 import QtCore
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 import sensor
 from algorithms import to_horizont
-from chart.mpl_chart import TimePlot
-from models import SensorDataModel
-from views import SensorDataTable
-from util import get_arguments
-
 from calibrate import Calibrate
+from chart.mpl_chart import TimePlot, XYPlot
+from models import SensorDataModel
+from util import get_arguments
+from views import SensorDataTable
 
 # For run in Raspberry Pi
 if platform.machine() == "armv7l":
@@ -33,16 +31,16 @@ ROOT = os.path.dirname(__file__)
 REPORT_PATH = os.path.join(ROOT, 'reports')
 
 
-class MagneticWidget(QDialog):
+class MagneticMonitor(QDialog):
     """
     Виджет логгера
     """
+
     def __init__(self, parent, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Data View
         self.data_view = {}
-        #gbox = QGroupBox("Sensor Data" + ":")
         gbox = QFrame(self)
         gbox.setFrameStyle(QFrame.Box | QFrame.Sunken)
         gbox_layout = QVBoxLayout(gbox)
@@ -73,11 +71,11 @@ class MagneticWidget(QDialog):
             self.options[name] = check
 
         # Layouts
-        dataview_layout = QVBoxLayout()
-        dataview_layout.setContentsMargins(0, 0, 0, 0)
-        dataview_layout.addWidget(gbox)
-        dataview_layout.addWidget(option_box)
-        dataview_layout.addSpacerItem(QSpacerItem(
+        left_dock = QVBoxLayout()
+        left_dock.setContentsMargins(0, 0, 0, 0)
+        left_dock.addWidget(gbox)
+        left_dock.addWidget(option_box)
+        left_dock.addSpacerItem(QSpacerItem(
             40, 20, QSizePolicy.Expanding, QSizePolicy.Expanding))
 
         # Table/Graph View
@@ -86,49 +84,48 @@ class MagneticWidget(QDialog):
         # ...Chart / Table
         self.stack = stack_layout = QStackedLayout()
 
-        self.frame = frame = QFrame(self)
+        frame = QFrame(self)
         frame.setFrameStyle(QFrame.Box | QFrame.Sunken)
-
-        # layout = QVBoxLayout(wgt)
         layout = QVBoxLayout(frame)
-        #layout.setContentsMargins(0,0,0,0)
-        # layout.setSpacing(0)
-
+        self.frame = frame
 
         # Графики
         self.charts = {}
 
         # График курса
-        self.charts['heading'] = chart = TimePlot(self, title='Heading')
-        chart.add("heading")
+        chart = TimePlot(self, title='Heading')
+        chart.add_line("heading")
         layout.addWidget(chart)
+        self.charts['heading'] = chart
 
         # График крена и диффирента
-        self.charts['inclinometer'] = chart = TimePlot(
-            self, title='Inclinometer')
-        chart.add("roll")
-        chart.add("pitch")
+        chart = TimePlot(self, title='Inclinometer')
+        chart.add_lines(["roll", "pitch"])
         layout.addWidget(chart)
+        self.charts['inclinometer'] = chart
 
         # График трех составляющих магнитного поля (Hy, Hx, Hz)
-        self.charts['magnitometer'] = chart = TimePlot(
-            self, title='Magnitometer')
-        chart.add("hy")
-        chart.add("hx")
-        chart.add("hz")
+        chart = TimePlot(self, title='Magnitometer')
+        chart.add_lines(("hy", "hx", "hz"))
         layout.addWidget(chart)
+        self.charts['magnitometer'] = chart
 
-        stack_layout.addWidget(frame)
+        stack_layout.addWidget(self.frame)
 
         # Таблица данных
         self.table_view = SensorDataTable(self)
         stack_layout.addWidget(self.table_view)
 
+        # График зависимости Hx от Hy
+        chart = XYPlot()
+        self.charts['deviation'] = chart
+        stack_layout.addWidget(chart)
+
         right_layout.addLayout(stack_layout, 2)
 
         # Central Layout
         centralLayout = QHBoxLayout(self)
-        centralLayout.addLayout(dataview_layout)
+        centralLayout.addLayout(left_dock)
         centralLayout.addLayout(right_layout, 2)
 
 
@@ -145,8 +142,8 @@ class MainWindow(QMainWindow):
         self.create_statusbar()
 
         # Central Widget
-        central_widget = MagneticWidget(self)
-        self.setCentralWidget(central_widget)
+        monitor = MagneticMonitor(self)
+        self.setCentralWidget(monitor)
 
         # Dock widgets
         #self.create_dock()
@@ -163,7 +160,11 @@ class MainWindow(QMainWindow):
         self.dock = dock = QDockWidget("Sensors", self)
 
         wgt = QWidget()
-        gbox_layout = QHBoxLayout(wgt)
+
+        wgt = QFrame(self)
+        wgt.setFrameStyle(QFrame.Box | QFrame.Sunken)
+        gbox_layout = QVBoxLayout(wgt)
+        gbox_layout.setContentsMargins(10,10,10,10)
         dock.setWidget(wgt)
         dock.setFloating(False)
 
@@ -188,8 +189,12 @@ class MainWindow(QMainWindow):
     def create_statusbar(self):
         # Statusbar
         self.status = self.statusBar()
+
         self.counter = QLabel("Rx: -")
         self.statusBar().addPermanentWidget(self.counter)
+
+        self.errors = QLabel("Err: -")
+        self.statusBar().addPermanentWidget(self.errors)
 
     def _action_rescan(self):
         # TODO: Move to app
@@ -292,10 +297,12 @@ class MainWindow(QMainWindow):
             self.toolbar_buttons[key] = btn
 
         btn = QToolButton()
+        btn.setObjectName("compensate")
         btn.setIcon(QIcon('assets/compass-icon'))
         btn.setCheckable(True)
-        self.toolbar_buttons['compensate'] = btn
+        self.viewButtonGroup.addButton(btn)
         toolbar.addWidget(btn)
+        self.toolbar_buttons['compensate'] = btn
 
         toolbar.addSeparator()
 
@@ -306,9 +313,26 @@ class MainWindow(QMainWindow):
         self.toolbar_buttons['log_on'] = btn
         toolbar.addWidget(btn)
 
-        # Records bar
+        # Compensation bar
         self.addToolBarBreak()
-        self.record_bar = record_bar = QToolBar()
+        compensation_bar = QToolBar()
+        compensation_bar.setMovable(False)
+        self.addToolBar(QtCore.Qt.BottomToolBarArea, compensation_bar)
+
+        run = QPushButton("Collection")
+        compensation_bar.addWidget(run)
+
+        progress = QProgressBar()
+        progress.setMaximum(36)
+        progress.setValue(0)
+        self.progress = progress
+        compensation_bar.addWidget(progress)
+
+        self.compensation_bar = compensation_bar
+
+        # Records bar
+        self.addToolBarBreak(QtCore.Qt.BottomToolBarArea)
+        record_bar = QToolBar()
         record_bar.setMovable(False)
         record_bar.setHidden(True)
 
@@ -323,6 +347,7 @@ class MainWindow(QMainWindow):
 
         self.toolbar_buttons['select_path'] = btn = QPushButton("...")
         record_bar.addWidget(btn)
+        self.record_bar = record_bar
 
     def centre(self):
         """ This method aligned main window related center screen """
@@ -336,7 +361,7 @@ class MainWindow(QMainWindow):
 
 class MagneticApp(MainWindow):
     app_title = "Magnetic Viewer - {0}"
-    TIMEOUT = 100
+    TIMEOUT = 105
     TIMEOUT_QUEUE = 0.05
 
     def __init__(self, data=None, title=None, *args, **kwargs):
@@ -344,12 +369,13 @@ class MagneticApp(MainWindow):
 
         self.setupUi()
 
+        self.errors_data = 0
+
         # Start/Stop monitor sensor data
         self.monitor_running = False
 
         # Start/Stop compensate
         self.compensate = False
-        self.initial_heading = None
 
         # On/Off logging data
         self.logging_enable = False
@@ -369,22 +395,21 @@ class MagneticApp(MainWindow):
 
         # Connecting signal/slot
         # ...button
-        self.toolbar_buttons['compensate'].clicked.connect(self.on_compensate)
+        #self.toolbar_buttons['compensate'].clicked.connect(self.on_compensate)
         self.toolbar_buttons['log_on'].clicked.connect(self.turn_logging)
-        self.toolbar_buttons['select_path'].clicked.connect(
-            self.on_select_path)
+        self.toolbar_buttons['select_path'].clicked.connect(self.on_select_path)
 
         # ...button group
         self.modeButtonGroup.buttonClicked[QAbstractButton].connect(
             self.on_run)
         self.viewButtonGroup.buttonClicked[QAbstractButton].connect(
-            self.on_switch_view)
+            self.on_switch_mode)
 
         # ...comboboxs
         self.spin.valueChanged[int].connect(self.on_set_chart_xinterval)
 
         # ...models
-        #self.model.rowsInserted.connect(self.on_model_changed)
+        # self.model.rowsInserted.connect(self.on_model_changed)
 
     def on_model_changed(self):
         print('On model changed')
@@ -397,23 +422,29 @@ class MagneticApp(MainWindow):
             data = [round(item, 1) for item in sensor.SENSOR_QUEUE.get(timeout=self.TIMEOUT_QUEUE)]
         except queue.Empty:
             self.status.showMessage("No sensor data")
+            self.errors_data+=1
+            self.errors.setText("Err: {}".format(self.errors_data))
             return
         pid, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz = data
 
-        # <2> Apply correction algorithms
+        # <2> Append data to model
+        self.model.append_data((r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz))
+
+        # Indicator recieve message
+        self.counter.setText("Rx: {}".format(self.model.rowCount()))
+
+        # <3> Apply correction algorithms
         if self.options['dub z'].checkState():
             hy_raw, hx_raw, hz_raw = to_horizont(hy_raw, hx_raw, hz_raw, r, p)
-
-        # <3> Append data to model
-        self.model.append_data((r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz))
 
         # <4> Show to data view
         self.show_data(r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)
 
         # <5> Update plot
-        #self.charts['inclinometer'].update_plot(r, p)
-        #self.charts['heading'].update_plot(h)
-        #self.charts['magnitometer'].update_plot(hy, hx, hz)
+        # self.charts['inclinometer'].update_plot(r, p)
+        # self.charts['heading'].update_plot(h)
+        # self.charts['magnitometer'].update_plot(hy, hx, hz)
+        self.charts['deviation'].update_plot(hy, hx)
 
         # <6> Logging data
         if self.logging_enable:
@@ -428,6 +459,8 @@ class MagneticApp(MainWindow):
         # <7> Compensate mode
         if self.compensate:
             self.calibrate.update(data)
+            self.progress.setValue(self.calibrate.status())
+
             # time = QtCore.QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz")
             # path = self.lineedit.text()
             # #str_data = ",".join((str(x) for x in (time, hex(pid), r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)))
@@ -439,9 +472,6 @@ class MagneticApp(MainWindow):
     def show_data(self, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz):
         """ Show sensor data to data view"""
         fmt_value = '{0:.1f}'
-
-        # Indicator recieve message
-        self.counter.setText("Rx: {}".format(self.model.rowCount()))
 
         self.data_view['roll'].setText(fmt_value.format(r))
         self.data_view['pitch'].setText(fmt_value.format(p))
@@ -520,11 +550,16 @@ class MagneticApp(MainWindow):
         self.model.reset()
         self.centralWidget().chart_view.clear_area()
 
-    def on_switch_view(self, btn):
-        if btn.objectName() == 'chart':
+    def on_switch_mode(self, btn):
+        btn_name = btn.objectName()
+        if btn_name == 'chart':
             self.stack.setCurrentIndex(0)
-        else:
+        elif btn_name == 'table':
             self.stack.setCurrentIndex(1)
+        elif btn_name == 'compensate':
+            self.stack.setCurrentIndex(2)
+        else:
+            self.stack.setCurrentIndex(0)
 
     def on_compensate(self):
         """ Обработка нажатие кнопки <Компенсация>"""
@@ -533,14 +568,15 @@ class MagneticApp(MainWindow):
             self.compensate = True
             self.toolbar_buttons['compensate'].setChecked(True)
             self.status.showMessage('Start compensate', 1000)
-            self.calibrate = Calibrate()
+            initial = float(self.data_view['heading'].text())
+            self.calibrate = Calibrate(initial)
         else:
             self.compensate = False
             self.toolbar_buttons['compensate'].setChecked(False)
             self.status.showMessage('Stop compensate', 1000)
             self.calibrate.compute()
             del self.calibrate
-    
+
     def turn_logging(self):
         ''' On/Off logging. If logging ON then bottombar visible '''
         self.logging_enable = ~self.logging_enable
