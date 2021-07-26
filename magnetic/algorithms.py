@@ -20,6 +20,39 @@ def to_horizont(y, x, z, roll_grad, pitch_grad):
     return yh, xh, zh
 
 
+class FixTable(object):
+    def __init__(self, xoffset, yoffset, a, b , c , d, clockwise):
+        self.x_offset = xoffset
+        self.y_offset = yoffset
+        self.A = a
+        self.B = b
+        self.C = c
+        self.D = d
+        self.clockwise = clockwise
+
+    def compensate(self, x, y):
+        """
+        Функция возвращающая скорректирования магнитных полей B,C
+        после калибрвоки
+        :param x: магнитные поле B
+        :param y: магнитное поле С
+        :return: (скорректированное B, скорректированное С)
+        """
+        x0, y0 = self._compensate_hard_iron(x, y)
+        return self._compensate_soft_iron(x0, y0)
+
+    def _compensate_soft_iron(self, x0, y0):
+        if self.clockwise:
+            return (x0 * self.A + y0 * self.B), (-x0 * self.C + y0 * self.D)
+        else:
+            return (x0 * self.A - y0 * self.B), (x0 * self.C + y0 * self.D)
+
+    def _compensate_hard_iron(self, x, y):
+        x0 = x - self.x_offset
+        y0 = y - self.y_offset
+        return x0, y0
+
+
 class Algorithm:
     """ This class used to correct raw magnetic field B,C"""
 
@@ -46,6 +79,14 @@ class Algorithm:
         """
         x0, y0 = self._compensate_hard_iron(x, y)
         return self._compensate_soft_iron(x0, y0)
+
+    def correct_heading(self, x0, y0):
+        x, y = self.correct(x0, y0)
+        h = math.degrees(math.atan2(-y, x))
+        if h < 0:
+            return 360 + h
+        else:
+            return h
 
     def _compute(self):
         """ Calculate calibration coefficients (Xoffset, Yoffset, А, B, C, D)"""

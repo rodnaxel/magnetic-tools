@@ -321,6 +321,7 @@ class MainWindow(QMainWindow):
 
         run = QPushButton("Collection")
         compensation_bar.addWidget(run)
+        self.toolbar_buttons['collection'] = run
 
         progress = QProgressBar()
         progress.setMaximum(36)
@@ -396,6 +397,8 @@ class MagneticApp(MainWindow):
         # Connecting signal/slot
         # ...button
         #self.toolbar_buttons['compensate'].clicked.connect(self.on_compensate)
+
+        self.toolbar_buttons['collection'].clicked.connect(self.on_compensate)
         self.toolbar_buttons['log_on'].clicked.connect(self.turn_logging)
         self.toolbar_buttons['select_path'].clicked.connect(self.on_select_path)
 
@@ -437,8 +440,15 @@ class MagneticApp(MainWindow):
         if self.options['dub z'].checkState():
             hy_raw, hx_raw, hz_raw = to_horizont(hy_raw, hx_raw, hz_raw, r, p)
 
+
+
         # <4> Show to data view
         self.show_data(r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)
+
+        if self.options['dub soft-iron'].checkState():
+            heading = self.maxdub.correct_heading(hx, hy)
+            fmt_value = '{0:.1f}'
+            self.data_view['roll'].setText(fmt_value.format(heading))
 
         # <5> Update plot
         # self.charts['inclinometer'].update_plot(r, p)
@@ -460,14 +470,13 @@ class MagneticApp(MainWindow):
         if self.compensate:
             self.calibrate.update(data)
             self.progress.setValue(self.calibrate.status())
-
-            # time = QtCore.QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz")
-            # path = self.lineedit.text()
-            # #str_data = ",".join((str(x) for x in (time, hex(pid), r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)))
-            # str_data = ",".join((str(x) for x in (hy, hx)))
-            # str_data += '\n'
-            # with open(path, 'a') as f:
-            #     f.write(str_data)
+            time = QtCore.QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz")
+            path = self.lineedit.text()
+            #str_data = ",".join((str(x) for x in (time, hex(pid), r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)))
+            str_data = ",".join((str(x) for x in (hy, hx)))
+            str_data += '\n'
+            with open(path, 'a') as f:
+                f.write(str_data)
 
     def show_data(self, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz):
         """ Show sensor data to data view"""
@@ -566,15 +575,19 @@ class MagneticApp(MainWindow):
 
         if not self.compensate:
             self.compensate = True
-            self.toolbar_buttons['compensate'].setChecked(True)
+            #self.toolbar_buttons['compensate'].setChecked(True)
+            self.toolbar_buttons['collection'].setText('Stop')
             self.status.showMessage('Start compensate', 1000)
             initial = float(self.data_view['heading'].text())
             self.calibrate = Calibrate(initial)
         else:
             self.compensate = False
-            self.toolbar_buttons['compensate'].setChecked(False)
+            self.toolbar_buttons['collection'].setText('Collection')
+            #self.toolbar_buttons['compensate'].setChecked(False)
             self.status.showMessage('Stop compensate', 1000)
-            self.calibrate.compute()
+            self.progress.setValue(0)
+            self.maxdub = self.calibrate.compute()
+
             del self.calibrate
 
     def turn_logging(self):

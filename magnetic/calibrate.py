@@ -29,13 +29,14 @@ class Calibrate(object):
     def compute(self):
         print("Compute start")
         maxdub = Algorithm(self.data)
-        for y,x in self.data:
-            yc, xc = maxdub.correct(x, y)
-            self.result.append([y, x, yc, xc])
-        
-        fname = "/home/tech/Workspace/python/magnetic-tools/fields.csv"
-        to_csv(fname, self.result, mode='x')
-        print("Compute Complete")
+        # for y,x in self.data:
+        #     yc, xc = maxdub.correct(x, y)
+        #     self.result.append([y, x, yc, xc])
+        #
+        # fname = "/home/tech/Workspace/python/magnetic-tools/fields.csv"
+        # to_csv(fname, self.result, mode='x')
+        # print("Compute Complete")
+        return  maxdub
 
     def update(self, data):
         if not self.is_complete(data[3]):
