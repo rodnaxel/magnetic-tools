@@ -1,8 +1,8 @@
 import os
-import platform
-import queue
 import sys
+import platform
 import threading
+import queue
 
 import serial
 from PyQt5 import QtCore
@@ -29,7 +29,72 @@ else:
     PORT_NAME = "/dev/ttyUSB0"
 
 ROOT = os.path.dirname(__file__)
-REPORT_PATH = os.path.join(ROOT, 'reports')
+REPORT_PATH = os.path.join(ROOT, 'logs')
+print(REPORT_PATH)
+
+
+
+class DataView(QFrame):
+    def __init__(self, parent=None, fmt='{0:.1f}', *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFrameStyle(QFrame.Box | QFrame.Sunken)
+        
+        self.layout = QVBoxLayout(self)
+
+        self.views = {}
+        self.fmt = fmt
+
+        self.create()
+
+    def create(self):
+        for name in ('roll', 'pitch', 'heading', 'hyr', 'hxr', 'hzr', 'hy', 'hx', 'hz'):
+            label = QLabel("-")
+            label.setAlignment(QtCore.Qt.AlignCenter)
+            label.setMinimumWidth(80)
+            label.setStyleSheet("QLabel {font: 16px; background-color: white}")
+            label.setFrameShape(QFrame.StyledPanel)
+            layout = QHBoxLayout()
+            layout.addWidget(QLabel(name.capitalize()))
+            layout.addWidget(label)
+            self.layout.addLayout(layout)
+            self.views[name] = label
+
+    def setValue(key, value, fmt_value='{0:.1f}'):
+        self.views[key].setText(self.fmt.format(value))
+
+    def value(key):
+        return self.views[key].text()
+
+    def update(self, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz, fmt_value='{0:.1f}'):
+        """ Show sensor data to data view"""
+        self.views['roll'].setText(fmt_value.format(r))
+        self.views['pitch'].setText(fmt_value.format(p))
+        self.views['heading'].setText(fmt_value.format(h))
+        self.views['hyr'].setText(fmt_value.format(hy_raw))
+        self.views['hxr'].setText(fmt_value.format(hx_raw))
+        self.views['hzr'].setText(fmt_value.format(hz_raw))
+        self.views['hy'].setText(fmt_value.format(hy))
+        self.views['hx'].setText(fmt_value.format(hx))
+        self.views['hz'].setText(fmt_value.format(hz))
+
+
+class OptionsBox(QGroupBox):
+    def __init__(self, title, option_names, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setTitle(title)
+        self.layout = QVBoxLayout(self)
+
+        self.option_names = option_names
+        self.options = {}
+
+        self.create()
+
+    def create(self):
+        for name in self.option_names:
+            check = QCheckBox(name)
+            check.setCheckState(False)
+            self.layout.addWidget(check)
+            self.options[name] = check        
 
 
 class MagneticMonitor(QDialog):
@@ -37,72 +102,29 @@ class MagneticMonitor(QDialog):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Data View
-        self.data_view = {}
-        gbox = QFrame(self)
-        gbox.setFrameStyle(QFrame.Box | QFrame.Sunken)
-        gbox_layout = QVBoxLayout(gbox)
+        dv_widget = DataView(self)
+        self.data_view = dv_widget.views
 
-        for name in ('roll', 'pitch', 'heading', 'hyr', 'hxr', 'hzr', 'hy', 'hx', 'hz'):
-            label = QLabel("-")
-            label.setAlignment(QtCore.Qt.AlignCenter)
-            label.setMinimumWidth(80)
-            label.setStyleSheet("QLabel {font: 16px; background-color: white}")
-            label.setFrameShape(QFrame.StyledPanel)
+        dv_widget2 = DataView(self)
+        self.data_view2 = dv_widget2.views
 
-            layout = QHBoxLayout()
-            layout.addWidget(QLabel(name.capitalize()))
-            layout.addWidget(label)
+        option_box = OptionsBox(title="Algorithm",
+            option_names=("dub z", "dub soft-iron", "update charts" ))
+        self.options = option_box.options
 
-            gbox_layout.addLayout(layout)
-
-            self.data_view[name] = label
-
-        self.data_view2 = {}
-        gbox2 = QFrame(self)
-        gbox2.setFrameStyle(QFrame.Box | QFrame.Sunken)
-        gbox_layout2 = QVBoxLayout(gbox2)
-
-        for name in ('roll', 'pitch', 'heading', 'hyr', 'hxr', 'hzr', 'hy', 'hx', 'hz'):
-            label = QLabel("-")
-            label.setAlignment(QtCore.Qt.AlignCenter)
-            label.setMinimumWidth(80)
-            label.setStyleSheet("QLabel {font: 16px; background-color: white}")
-            label.setFrameShape(QFrame.StyledPanel)
-
-            layout = QHBoxLayout()
-            layout.addWidget(QLabel(name.capitalize()))
-            layout.addWidget(label)
-
-            gbox_layout2.addLayout(layout)
-
-            self.data_view2[name] = label
-
-        # Options View
-        self.options = {}
-        option_box = QGroupBox("Apply algorithm:")
-        option_layout = QVBoxLayout(option_box)
-        for name in ("dub z", "dub soft-iron", "update charts" ):
-            check = QCheckBox(name)
-            check.setCheckState(False)
-            option_layout.addWidget(check)
-            self.options[name] = check
-
-        # Layouts
+        # Left dock layouts 
         left_dock = QVBoxLayout()
         left_dock.setContentsMargins(0, 0, 0, 0)
-        left_dock.addWidget(gbox)
-        left_dock.addWidget(gbox2)
+        left_dock.addWidget(dv_widget)
+        left_dock.addWidget(dv_widget2)
         left_dock.addWidget(option_box)
         left_dock.addSpacerItem(QSpacerItem(
             40, 20, QSizePolicy.Expanding, QSizePolicy.Expanding))
 
+
         # Table/Graph View
-        content_layout = QVBoxLayout()
 
         # ...Chart / Table
-        self.stack = stack_layout = QStackedLayout()
-
         frame = QFrame(self)
         frame.setFrameStyle(QFrame.Box | QFrame.Sunken)
         layout = QVBoxLayout(frame)
@@ -129,6 +151,7 @@ class MagneticMonitor(QDialog):
         layout.addWidget(chart)
         self.charts['magnitometer'] = chart
 
+        stack_layout = self.stack = QStackedLayout()
         stack_layout.addWidget(self.frame)
 
         # Таблица данных
@@ -140,6 +163,7 @@ class MagneticMonitor(QDialog):
         self.charts['deviation'] = chart
         stack_layout.addWidget(chart)
 
+        content_layout = QVBoxLayout()
         content_layout.addLayout(stack_layout, 2)
 
         # Central Layout
@@ -160,12 +184,10 @@ class MainWindow(QMainWindow):
         self.create_toolbar()
         self.create_statusbar()
 
-        # Central Widget
-        monitor = MagneticMonitor(self)
-        self.setCentralWidget(monitor)
+        self.setCentralWidget(MagneticMonitor(self))
 
         # Dock widgets
-        #self.create_dock()
+        # self.create_dock()
 
         # Environment
         self.charts = self.centralWidget().charts
@@ -177,34 +199,15 @@ class MainWindow(QMainWindow):
         self.frame = self.centralWidget().frame
 
     def create_dock(self):
-        self.dock = dock = QDockWidget("Sensors", self)
-
-        wgt = QWidget()
-
-        wgt = QFrame(self)
-        wgt.setFrameStyle(QFrame.Box | QFrame.Sunken)
-        gbox_layout = QVBoxLayout(wgt)
-        gbox_layout.setContentsMargins(10,10,10,10)
-        dock.setWidget(wgt)
+        dock = QDockWidget("Sensors", self)
         dock.setFloating(False)
 
-        for name in ('roll', 'pitch', 'heading', 'hyr', 'hxr', 'hzr', 'hy', 'hx', 'hz'):
-            label = QLabel("-")
-            label.setAlignment(QtCore.Qt.AlignCenter)
-            label.setMinimumWidth(80)
-            label.setMaximumHeight(40)
-            label.setStyleSheet("QLabel {font: 16px; background-color: white}")
-            label.setFrameShape(QFrame.StyledPanel)
-
-            layout = QHBoxLayout()
-            layout.addWidget(QLabel(name.capitalize()))
-            layout.addWidget(label)
-
-            gbox_layout.addLayout(layout)
-        gbox_layout.addSpacerItem(QSpacerItem(
-            40, 20, QSizePolicy.Expanding, QSizePolicy.Expanding))
-
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
+        wgt = QWidget()
+        dock.setWidget(wgt)
+    
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dock)
+        
+        self.dock = dock
 
     def create_statusbar(self):
         self.status = self.statusBar()
@@ -212,20 +215,6 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.counter)
         self.errors = QLabel("Err: -")
         self.statusBar().addPermanentWidget(self.errors)
-
-    def _action_rescan(self):
-        # TODO: Move to app
-        available = sensor.scan_ports()
-        if available:
-            self.portbox.clear()
-            self.portbox.addItems(available)
-            self.status.showMessage("Find ports", 1000)
-        else:
-            self.status.showMessage("No available port", 1000)
-
-    def _action_quit(self):
-        # TODO: move to App
-        QtCore.QCoreApplication.exit(0)
 
     def create_menu(self):
         self.menus = {}
@@ -271,10 +260,12 @@ class MainWindow(QMainWindow):
             toolbar.addWidget(btn)
             self.toolbar_buttons[key] = btn
         toolbar.addSeparator()
+
         # Port box
         toolbar.addWidget(QLabel("Port:", self))
         self.portbox = QComboBox(self)
         toolbar.addWidget(self.portbox)
+
         # Button find serial ports
         btn = QToolButton()
         btn.setIcon(QIcon("assets/update-icon.png"))
@@ -283,6 +274,7 @@ class MainWindow(QMainWindow):
         self.toolbar_buttons['rescan'] = btn
         self.toolbar_buttons['rescan'].clicked.connect(self._action_rescan)
         toolbar.addSeparator()
+
         # Select number of samples
         self.spin = QSpinBox()
         self.spin.setValue(100)
@@ -293,7 +285,8 @@ class MainWindow(QMainWindow):
         self.spin.setToolTip("Set x interfall for all charts")
         toolbar.addWidget(self.spin)
         toolbar.addSeparator()
-        # Chart/Table view mode
+
+        # Buttons for switch modes (charts/table/deviation)
         self.viewButtonGroup = QButtonGroup()
         for key, icon, tooltip in (
                 ("chart", "assets/charts.png", "Chart View"),
@@ -310,6 +303,8 @@ class MainWindow(QMainWindow):
             self.viewButtonGroup.addButton(btn)
             toolbar.addWidget(btn)
             self.toolbar_buttons[key] = btn
+        
+        #
         btn = QToolButton()
         btn.setObjectName("compensate")
         btn.setIcon(QIcon('assets/compass-icon'))
@@ -317,13 +312,16 @@ class MainWindow(QMainWindow):
         self.viewButtonGroup.addButton(btn)
         toolbar.addWidget(btn)
         self.toolbar_buttons['compensate'] = btn
+        
         toolbar.addSeparator()
+        
+        #
         btn = QToolButton()
         btn.setIcon(QIcon('assets/log-icon'))
         btn.setToolTip("Logging on/off")
         btn.setCheckable(True)
-        self.toolbar_buttons['log_on'] = btn
         toolbar.addWidget(btn)
+        self.toolbar_buttons['log_on'] = btn
 
     def create_compensationbar(self):
         # Compensation bar
@@ -331,33 +329,54 @@ class MainWindow(QMainWindow):
         compensation_bar = QToolBar()
         compensation_bar.setMovable(False)
         self.addToolBar(QtCore.Qt.BottomToolBarArea, compensation_bar)
+        
         collection_btn = QPushButton("Collection")
         compensation_bar.addWidget(collection_btn)
         self.toolbar_buttons['collection'] = collection_btn
+        
         check = QCheckBox('Auto')
         compensation_bar.addWidget(check)
+        
         progress = QProgressBar()
         progress.setMaximum(36)
         progress.setValue(0)
         self.progress = progress
         compensation_bar.addWidget(progress)
+        
         self.compensation_bar = compensation_bar
 
     def create_recordbar(self):
-        # Records bar
         self.addToolBarBreak(QtCore.Qt.BottomToolBarArea)
         record_bar = QToolBar()
         record_bar.setMovable(False)
         record_bar.setHidden(True)
         self.addToolBar(QtCore.Qt.BottomToolBarArea, record_bar)
+        
         record_bar.addWidget(QLabel("Path: "))
+        
         self.lineedit = QLineEdit()
         self.lineedit.setReadOnly(True)
         self.lineedit.setText(os.path.join(ROOT, 'reports', 'log.csv'))
         record_bar.addWidget(self.lineedit)
+        
         self.toolbar_buttons['select_path'] = btn = QPushButton("...")
         record_bar.addWidget(btn)
+        
         self.record_bar = record_bar
+
+    def _action_rescan(self):
+        # TODO: Move to app
+        available = sensor.scan_ports()
+        if available:
+            self.portbox.clear()
+            self.portbox.addItems(available)
+            self.status.showMessage("Find ports", 1000)
+        else:
+            self.status.showMessage("No available port", 1000)
+
+    def _action_quit(self):
+        """ Для корректного завершения потока функция определяется в классе App """
+        raise NotImplementedError
 
     def centre(self):
         """ This method aligned main window related center screen """
@@ -431,8 +450,13 @@ class MagneticApp(MainWindow):
             data = [round(item, 1) for item in sensor.SENSOR_QUEUE.get(timeout=self.TIMEOUT_QUEUE)]
         except queue.Empty:
             self.status.showMessage("No sensor data")
-            self.errors_data += 1
-            self.errors.setText("Err: {}".format(self.errors_data))
+            
+            if self.errors_data <= 10000:
+                self.errors_data += 1
+                self.errors.setText("Err: {}".format(self.errors_data))
+            else:
+                self.errors.setText("Err: {}".format(">10000"))
+
             return
 
         pid, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz = data

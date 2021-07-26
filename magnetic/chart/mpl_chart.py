@@ -3,6 +3,8 @@ import matplotlib
 matplotlib.use('Qt5Agg')
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+
 from matplotlib.figure import Figure
 
 
@@ -24,6 +26,10 @@ class XYPlot(FigureCanvas):
         self.ydata = []
 
         super(XYPlot, self).__init__(fig)
+
+    def navigation_bar(self, parent):
+        return NavigationToolbar(self, parent)
+
 
     def set_data(self, xdata, ydata):
         self.axes.plot(xdata, ydata, marker='.', markeredgewidth=0.2, linewidth=0.5)

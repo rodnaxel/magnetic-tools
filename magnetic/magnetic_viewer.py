@@ -81,7 +81,10 @@ class Ui(QMainWindow):
 		# size_policy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
 		# self.chartwidget.setSizePolicy(size_policy)
 		# self.chartwidget.setMaximumWidth(self.chartwidget.maximumHeight())
+		self.addToolBar(self.chartwidget.navigation_bar(self))
+
 		splitter.addWidget(self.chartwidget)
+
 
 		# Layout
 		centralLayout = QVBoxLayout(centralWidget)
