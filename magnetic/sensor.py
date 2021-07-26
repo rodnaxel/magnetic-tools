@@ -1,5 +1,6 @@
 import threading
 import time
+import queue
 from queue import Queue
 
 import serial
@@ -116,7 +117,10 @@ class Sensor(object):
 					if pid == 112:
 						data = [pid]
 						data.extend(parse_dorient(message))
-						SENSOR_QUEUE.put(data)
+						try:
+							SENSOR_QUEUE.put(data, block=False)
+						except queue.Full:
+							print("Full")
 					start = 0
 					message = b''
 			else:

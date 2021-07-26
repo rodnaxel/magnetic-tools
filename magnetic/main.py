@@ -362,8 +362,8 @@ class MainWindow(QMainWindow):
 
 class MagneticApp(MainWindow):
     app_title = "Magnetic Viewer - {0}"
-    TIMEOUT = 105
-    TIMEOUT_QUEUE = 0.05
+    TIMEOUT = 100
+    TIMEOUT_QUEUE = 0.5
 
     def __init__(self, data=None, title=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -440,8 +440,6 @@ class MagneticApp(MainWindow):
         if self.options['dub z'].checkState():
             hy_raw, hx_raw, hz_raw = to_horizont(hy_raw, hx_raw, hz_raw, r, p)
 
-
-
         # <4> Show to data view
         self.show_data(r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)
 
@@ -451,10 +449,10 @@ class MagneticApp(MainWindow):
             self.data_view['roll'].setText(fmt_value.format(heading))
 
         # <5> Update plot
-        # self.charts['inclinometer'].update_plot(r, p)
-        # self.charts['heading'].update_plot(h)
-        # self.charts['magnitometer'].update_plot(hy, hx, hz)
-        self.charts['deviation'].update_plot(hy, hx)
+        self.charts['inclinometer'].update_plot(r, p)
+        self.charts['heading'].update_plot(h)
+        self.charts['magnitometer'].update_plot(hy, hx, hz)
+        #self.charts['deviation'].update_plot(hy, hx)
 
         # <6> Logging data
         if self.logging_enable:
