@@ -17,6 +17,7 @@ from models import SensorDataModel
 from util import get_arguments
 from views import SensorDataTable
 
+
 # For run in Raspberry Pi
 if platform.machine() == "armv7l":
     # os.environ["QT_QPA_PLATFORM"] = "linuxfb"
@@ -32,10 +33,7 @@ REPORT_PATH = os.path.join(ROOT, 'reports')
 
 
 class MagneticMonitor(QDialog):
-    """
-    Виджет логгера
-    """
-
+    """ UI """
     def __init__(self, parent, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -60,11 +58,31 @@ class MagneticMonitor(QDialog):
 
             self.data_view[name] = label
 
+        self.data_view2 = {}
+        gbox2 = QFrame(self)
+        gbox2.setFrameStyle(QFrame.Box | QFrame.Sunken)
+        gbox_layout2 = QVBoxLayout(gbox2)
+
+        for name in ('roll', 'pitch', 'heading', 'hyr', 'hxr', 'hzr', 'hy', 'hx', 'hz'):
+            label = QLabel("-")
+            label.setAlignment(QtCore.Qt.AlignCenter)
+            label.setMinimumWidth(80)
+            label.setStyleSheet("QLabel {font: 16px; background-color: white}")
+            label.setFrameShape(QFrame.StyledPanel)
+
+            layout = QHBoxLayout()
+            layout.addWidget(QLabel(name.capitalize()))
+            layout.addWidget(label)
+
+            gbox_layout2.addLayout(layout)
+
+            self.data_view2[name] = label
+
         # Options View
         self.options = {}
         option_box = QGroupBox("Apply algorithm:")
         option_layout = QVBoxLayout(option_box)
-        for name in ("dub z", "dub soft-iron"):
+        for name in ("dub z", "dub soft-iron", "update charts" ):
             check = QCheckBox(name)
             check.setCheckState(False)
             option_layout.addWidget(check)
@@ -74,12 +92,13 @@ class MagneticMonitor(QDialog):
         left_dock = QVBoxLayout()
         left_dock.setContentsMargins(0, 0, 0, 0)
         left_dock.addWidget(gbox)
+        left_dock.addWidget(gbox2)
         left_dock.addWidget(option_box)
         left_dock.addSpacerItem(QSpacerItem(
             40, 20, QSizePolicy.Expanding, QSizePolicy.Expanding))
 
         # Table/Graph View
-        right_layout = QVBoxLayout()
+        content_layout = QVBoxLayout()
 
         # ...Chart / Table
         self.stack = stack_layout = QStackedLayout()
@@ -121,12 +140,12 @@ class MagneticMonitor(QDialog):
         self.charts['deviation'] = chart
         stack_layout.addWidget(chart)
 
-        right_layout.addLayout(stack_layout, 2)
+        content_layout.addLayout(stack_layout, 2)
 
         # Central Layout
         centralLayout = QHBoxLayout(self)
         centralLayout.addLayout(left_dock)
-        centralLayout.addLayout(right_layout, 2)
+        centralLayout.addLayout(content_layout, 2)
 
 
 class MainWindow(QMainWindow):
@@ -134,7 +153,7 @@ class MainWindow(QMainWindow):
         super().__init__(*args, **kwargs)
 
     def setupUi(self):
-        self.setWindowTitle(f"Magnetic Lab")
+        self.setWindowTitle(f"Magnetic Monitor (special for Max Dub)")
         self.setMinimumSize(100, 600)
 
         self.create_menu()
@@ -151,6 +170,7 @@ class MainWindow(QMainWindow):
         # Environment
         self.charts = self.centralWidget().charts
         self.data_view = self.centralWidget().data_view
+        self.data_view2 = self.centralWidget().data_view2
         self.table_view = self.centralWidget().table_view
         self.options = self.centralWidget().options
         self.stack = self.centralWidget().stack
@@ -187,12 +207,9 @@ class MainWindow(QMainWindow):
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
 
     def create_statusbar(self):
-        # Statusbar
         self.status = self.statusBar()
-
         self.counter = QLabel("Rx: -")
         self.statusBar().addPermanentWidget(self.counter)
-
         self.errors = QLabel("Err: -")
         self.statusBar().addPermanentWidget(self.errors)
 
@@ -206,12 +223,11 @@ class MainWindow(QMainWindow):
         else:
             self.status.showMessage("No available port", 1000)
 
+    def _action_quit(self):
+        # TODO: move to App
+        QtCore.QCoreApplication.exit(0)
+
     def create_menu(self):
-
-        def _action_quit():
-            # TODO: move to App
-            QtCore.QCoreApplication.exit(0)
-
         self.menus = {}
         menu = self.menuBar()
 
@@ -224,16 +240,19 @@ class MainWindow(QMainWindow):
         file_menu.addAction("Export to...", lambda: print("Export to..."))
         file_menu.addAction("Import from...", lambda: print("Import from..."))
         file_menu.addSeparator()
-        file_menu.addAction("Exit", _action_quit)
+        file_menu.addAction("Exit", self._action_quit)
         menu.addMenu(file_menu)
         self.menus['file'] = file_menu
 
     def create_toolbar(self):
+        self.create_mainbar()
+        self.create_compensationbar()
+        self.create_recordbar()
+
+    def create_mainbar(self):
         toolbar = self.addToolBar("File")
         toolbar.setMovable(False)
-
         self.toolbar_buttons = {}
-
         # Start/Stop buttons
         self.modeButtonGroup = QButtonGroup()
         for key, icon, tooltip in (
@@ -252,12 +271,10 @@ class MainWindow(QMainWindow):
             toolbar.addWidget(btn)
             self.toolbar_buttons[key] = btn
         toolbar.addSeparator()
-
         # Port box
         toolbar.addWidget(QLabel("Port:", self))
         self.portbox = QComboBox(self)
         toolbar.addWidget(self.portbox)
-
         # Button find serial ports
         btn = QToolButton()
         btn.setIcon(QIcon("assets/update-icon.png"))
@@ -266,7 +283,6 @@ class MainWindow(QMainWindow):
         self.toolbar_buttons['rescan'] = btn
         self.toolbar_buttons['rescan'].clicked.connect(self._action_rescan)
         toolbar.addSeparator()
-
         # Select number of samples
         self.spin = QSpinBox()
         self.spin.setValue(100)
@@ -277,7 +293,6 @@ class MainWindow(QMainWindow):
         self.spin.setToolTip("Set x interfall for all charts")
         toolbar.addWidget(self.spin)
         toolbar.addSeparator()
-
         # Chart/Table view mode
         self.viewButtonGroup = QButtonGroup()
         for key, icon, tooltip in (
@@ -295,7 +310,6 @@ class MainWindow(QMainWindow):
             self.viewButtonGroup.addButton(btn)
             toolbar.addWidget(btn)
             self.toolbar_buttons[key] = btn
-
         btn = QToolButton()
         btn.setObjectName("compensate")
         btn.setIcon(QIcon('assets/compass-icon'))
@@ -303,9 +317,7 @@ class MainWindow(QMainWindow):
         self.viewButtonGroup.addButton(btn)
         toolbar.addWidget(btn)
         self.toolbar_buttons['compensate'] = btn
-
         toolbar.addSeparator()
-
         btn = QToolButton()
         btn.setIcon(QIcon('assets/log-icon'))
         btn.setToolTip("Logging on/off")
@@ -313,39 +325,36 @@ class MainWindow(QMainWindow):
         self.toolbar_buttons['log_on'] = btn
         toolbar.addWidget(btn)
 
+    def create_compensationbar(self):
         # Compensation bar
         self.addToolBarBreak()
         compensation_bar = QToolBar()
         compensation_bar.setMovable(False)
         self.addToolBar(QtCore.Qt.BottomToolBarArea, compensation_bar)
-
-        run = QPushButton("Collection")
-        compensation_bar.addWidget(run)
-        self.toolbar_buttons['collection'] = run
-
+        collection_btn = QPushButton("Collection")
+        compensation_bar.addWidget(collection_btn)
+        self.toolbar_buttons['collection'] = collection_btn
+        check = QCheckBox('Auto')
+        compensation_bar.addWidget(check)
         progress = QProgressBar()
         progress.setMaximum(36)
         progress.setValue(0)
         self.progress = progress
         compensation_bar.addWidget(progress)
-
         self.compensation_bar = compensation_bar
 
+    def create_recordbar(self):
         # Records bar
         self.addToolBarBreak(QtCore.Qt.BottomToolBarArea)
         record_bar = QToolBar()
         record_bar.setMovable(False)
         record_bar.setHidden(True)
-
         self.addToolBar(QtCore.Qt.BottomToolBarArea, record_bar)
-
         record_bar.addWidget(QLabel("Path: "))
-
         self.lineedit = QLineEdit()
         self.lineedit.setReadOnly(True)
         self.lineedit.setText(os.path.join(ROOT, 'reports', 'log.csv'))
         record_bar.addWidget(self.lineedit)
-
         self.toolbar_buttons['select_path'] = btn = QPushButton("...")
         record_bar.addWidget(btn)
         self.record_bar = record_bar
@@ -395,9 +404,6 @@ class MagneticApp(MainWindow):
         self.centralWidget().table_view.setModel(self.model)
 
         # Connecting signal/slot
-        # ...button
-        #self.toolbar_buttons['compensate'].clicked.connect(self.on_compensate)
-
         self.toolbar_buttons['collection'].clicked.connect(self.on_compensate)
         self.toolbar_buttons['log_on'].clicked.connect(self.turn_logging)
         self.toolbar_buttons['select_path'].clicked.connect(self.on_select_path)
@@ -425,9 +431,10 @@ class MagneticApp(MainWindow):
             data = [round(item, 1) for item in sensor.SENSOR_QUEUE.get(timeout=self.TIMEOUT_QUEUE)]
         except queue.Empty:
             self.status.showMessage("No sensor data")
-            self.errors_data+=1
+            self.errors_data += 1
             self.errors.setText("Err: {}".format(self.errors_data))
             return
+
         pid, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz = data
 
         # <2> Append data to model
@@ -444,15 +451,20 @@ class MagneticApp(MainWindow):
         self.show_data(r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)
 
         if self.options['dub soft-iron'].checkState():
-            heading = self.maxdub.correct_heading(hx, hy)
-            fmt_value = '{0:.1f}'
-            self.data_view['roll'].setText(fmt_value.format(heading))
+            try:
+                heading = self.maxdub.correct_heading(hx, hy)
+                fmt_value = '{0:.1f}'
+                self.data_view2['heading'].setText(fmt_value.format(heading))
+            except AttributeError:
+                self.options['dub soft-iron'].setCheckState(False)
+                self.status.showMessage("Error! Please, calibrate", 1000)
 
         # <5> Update plot
-        self.charts['inclinometer'].update_plot(r, p)
-        self.charts['heading'].update_plot(h)
-        self.charts['magnitometer'].update_plot(hy, hx, hz)
-        #self.charts['deviation'].update_plot(hy, hx)
+        if self.options['update charts'].checkState():
+            #self.charts['inclinometer'].update_plot(r, p)
+            #self.charts['heading'].update_plot(h)
+            #self.charts['magnitometer'].update_plot(hy, hx, hz)
+            self.charts['deviation'].update_plot(hy, hx)
 
         # <6> Logging data
         if self.logging_enable:
@@ -476,10 +488,8 @@ class MagneticApp(MainWindow):
             with open(path, 'a') as f:
                 f.write(str_data)
 
-    def show_data(self, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz):
+    def show_data(self, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz, fmt_value='{0:.1f}'):
         """ Show sensor data to data view"""
-        fmt_value = '{0:.1f}'
-
         self.data_view['roll'].setText(fmt_value.format(r))
         self.data_view['pitch'].setText(fmt_value.format(p))
         self.data_view['heading'].setText(fmt_value.format(h))
@@ -529,7 +539,7 @@ class MagneticApp(MainWindow):
         if not self.monitor_running:
             return
 
-        self.status.showMessage("Stopped")
+        self.status.showMessage("Stop")
 
         # Enable widgets
         self.portbox.setEnabled(True)
@@ -565,31 +575,36 @@ class MagneticApp(MainWindow):
             self.stack.setCurrentIndex(1)
         elif btn_name == 'compensate':
             self.stack.setCurrentIndex(2)
+            import subprocess
+            subprocess.run(["python", "magnetic_viewer.py"])
         else:
             self.stack.setCurrentIndex(0)
 
     def on_compensate(self):
-        """ Обработка нажатие кнопки <Компенсация>"""
+        if not self.monitor_running:
+            self.status.showMessage("Please, connect sensor")
+            return
 
         if not self.compensate:
-            self.compensate = True
-            #self.toolbar_buttons['compensate'].setChecked(True)
             self.toolbar_buttons['collection'].setText('Stop')
-            self.status.showMessage('Start compensate', 1000)
+
             initial = float(self.data_view['heading'].text())
             self.calibrate = Calibrate(initial)
-        else:
-            self.compensate = False
-            self.toolbar_buttons['collection'].setText('Collection')
-            #self.toolbar_buttons['compensate'].setChecked(False)
-            self.status.showMessage('Stop compensate', 1000)
-            self.progress.setValue(0)
-            self.maxdub = self.calibrate.compute()
 
+            self.compensate = True
+            self.status.showMessage('Start compensate', 1000)
+        else:
+            self.toolbar_buttons['collection'].setText('Collection')
+            self.progress.setValue(0)
+
+            self.maxdub = self.calibrate.compute()
             del self.calibrate
 
+            self.compensate = False
+            self.status.showMessage('Stop compensate', 1000)
+
     def turn_logging(self):
-        ''' On/Off logging. If logging ON then bottombar visible '''
+        """ On/Off logging. If logging ON then bottombar visible """
         self.logging_enable = ~self.logging_enable
 
         if self.logging_enable:
@@ -615,6 +630,17 @@ class MagneticApp(MainWindow):
 
         if fname:
             self.lineedit.setText(fname)
+
+    def closeEvent(self, QCloseEvent):
+        self._action_quit()
+
+    def _action_quit(self):
+        try:
+            self.sensor.terminate()
+            self.t.join(timeout=0.1)
+        except AttributeError:
+            pass
+        QtCore.QCoreApplication.exit(0)
 
 
 def main():

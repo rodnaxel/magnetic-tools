@@ -6,6 +6,19 @@ from queue import Queue
 import serial
 import serial.tools.list_ports as tools
 
+# Логгирование
+import sys
+import logging
+
+logger = logging.getLogger("sensor")
+logger.setLevel(logging.DEBUG)
+# fileHandler = logging.FileHandler('logs/logs.log')
+# fileHandler.setFormatter(logging.Formatter(fmt='[%(asctime)s: %(levelname)s] %(message)s'))
+# logger.addHandler(fileHandler)
+stream_handler = logging.StreamHandler(stream=sys.stdout)
+stream_handler.setFormatter(logging.Formatter(fmt='[%(asctime)s: %(levelname)s] %(message)s'))
+logger.addHandler(stream_handler)
+
 
 def scan_ports():
 	ports = [port.device for port in tools.comports()]
@@ -68,6 +81,7 @@ class Sensor(object):
 	def __init__(self, bus):
 		self.bus = bus
 		self._running = True
+		self._full_queue = 0
 
 	def recieve(self):
 		return SENSOR_QUEUE.get()
@@ -77,7 +91,7 @@ class Sensor(object):
 	
 	def run(self):
 		""" This function used to read any message from sensor"""
-		print('Start readany')
+		logger.debug("port thread running")
 		message = b''
 		start = 0
 		pid = 0
@@ -87,6 +101,7 @@ class Sensor(object):
 			try:
 				buf = self.bus.read(1)
 			except serial.SerialException:
+				logger.exception("no serial port")
 				SENSOR_QUEUE.put(object())
 
 			if start == 0:
@@ -120,11 +135,12 @@ class Sensor(object):
 						try:
 							SENSOR_QUEUE.put(data, block=False)
 						except queue.Full:
-							print("Full")
+							logger.debug("input queue is full")
 					start = 0
 					message = b''
 			else:
-				print("Error: sensor.readany(): ")
+				logger.error("in sensor.readany()")
+		logger.debug("port thread stop")
 
 
 def debug():
