@@ -8,28 +8,60 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 from matplotlib.figure import Figure
 
 
+
+class BasePlot(FigureCanvas):
+    def __init__(self, parent=None, width=5, height=5, dpi=100,
+                 title='', ylabel='', xlabel='', 
+                 *args, **kwargs):
+        
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.fig.suptitle(title, fontsize=10)
+
+        self.axes = fig.add_subplot(111)
+        self.axes.set_xlim(self.xmin, self.xmax)
+        self.axes.grid()
+    
+        super().__init__(fig)
+
+    def add_point(self, x, y):
+        pass
+
+    def remove_point(self, x, y):
+        pass
+
+    def clear():
+        pass
+
+    def enable_cursor(enabled):
+        if enabled:
+            self.cursor = Cursor(self.axes)
+            fig.canvas.mpl_connect('motion_notify_event', self.cursor.on_mouse_move)
+
+
+
 class XYPlot(FigureCanvas):
     def __init__(self, parent=None, width=5, height=5, dpi=100,
                  cursor_visible=False,
                  title='', ylabel='', xlabel=''):
 
-        self.fig = fig = Figure(figsize=(width, height), dpi=dpi)
-        fig.suptitle(title, fontsize=10)
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.fig.suptitle(title, fontsize=10)
 
-        self.axes = fig.add_subplot(111)
-        self.axes.set_xlim(-50, 50)
-        self.axes.set_ylim(-50, 50)
-        self.axes.grid()
-
+        self.init_axes()
 
         self.xdata = []
         self.ydata = []
 
-        super(XYPlot, self).__init__(fig)
+        super(XYPlot, self).__init__(self.fig)
+
+    def init_axes(self):
+        self.axes = self.fig.add_subplot(111)
+        self.axes.set_xlim(-50, 50)
+        self.axes.set_ylim(-50, 50)
+        self.axes.grid()
 
     def navigation_bar(self, parent):
         return NavigationToolbar(self, parent)
-
 
     def set_data(self, xdata, ydata):
         self.axes.plot(xdata, ydata, marker='.', markeredgewidth=0.2, linewidth=0.5)
@@ -37,6 +69,9 @@ class XYPlot(FigureCanvas):
 
     def clear(self):
         self.axes.cla()
+        self.init_axes()
+        self.draw()
+
 
     def update_plot(self, x, y):
         self.axes.cla()

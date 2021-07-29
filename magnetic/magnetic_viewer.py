@@ -8,7 +8,7 @@ from algorithms import Algorithm
 from chart.mpl_chart import XYPlot
 from models import SensorFieldModel
 from util import from_csv, to_csv, get_arguments
-from views import SensorDataTable
+from widgets import SensorDataTable
 
 
 class Ui(QMainWindow):
@@ -73,7 +73,6 @@ class Ui(QMainWindow):
 		splitter.addWidget(self.table)
 
 		# Chart
-		# self.chartwidget = EllipsoidGraph()
 		self.chartwidget = XYPlot()
 		# size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 		# size_policy.setHorizontalStretch(1)
@@ -84,7 +83,6 @@ class Ui(QMainWindow):
 		self.addToolBar(self.chartwidget.navigation_bar(self))
 
 		splitter.addWidget(self.chartwidget)
-
 
 		# Layout
 		centralLayout = QVBoxLayout(centralWidget)

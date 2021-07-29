@@ -15,7 +15,7 @@ from calibrate import Calibrate
 from chart.mpl_chart import TimePlot, XYPlot
 from models import SensorDataModel
 from util import get_arguments
-from views import SensorDataTable
+from widgets import DataView, OptionsBox, SensorDataTable
 
 
 # For run in Raspberry Pi
@@ -33,77 +33,13 @@ REPORT_PATH = os.path.join(ROOT, 'logs')
 print(REPORT_PATH)
 
 
-
-class DataView(QFrame):
-    def __init__(self, parent=None, fmt='{0:.1f}', *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setFrameStyle(QFrame.Box | QFrame.Sunken)
-        
-        self.layout = QVBoxLayout(self)
-
-        self.views = {}
-        self.fmt = fmt
-
-        self.create()
-
-    def create(self):
-        for name in ('roll', 'pitch', 'heading', 'hyr', 'hxr', 'hzr', 'hy', 'hx', 'hz'):
-            label = QLabel("-")
-            label.setAlignment(QtCore.Qt.AlignCenter)
-            label.setMinimumWidth(80)
-            label.setStyleSheet("QLabel {font: 16px; background-color: white}")
-            label.setFrameShape(QFrame.StyledPanel)
-            layout = QHBoxLayout()
-            layout.addWidget(QLabel(name.capitalize()))
-            layout.addWidget(label)
-            self.layout.addLayout(layout)
-            self.views[name] = label
-
-    def setValue(key, value, fmt_value='{0:.1f}'):
-        self.views[key].setText(self.fmt.format(value))
-
-    def value(key):
-        return self.views[key].text()
-
-    def update(self, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz, fmt_value='{0:.1f}'):
-        """ Show sensor data to data view"""
-        self.views['roll'].setText(fmt_value.format(r))
-        self.views['pitch'].setText(fmt_value.format(p))
-        self.views['heading'].setText(fmt_value.format(h))
-        self.views['hyr'].setText(fmt_value.format(hy_raw))
-        self.views['hxr'].setText(fmt_value.format(hx_raw))
-        self.views['hzr'].setText(fmt_value.format(hz_raw))
-        self.views['hy'].setText(fmt_value.format(hy))
-        self.views['hx'].setText(fmt_value.format(hx))
-        self.views['hz'].setText(fmt_value.format(hz))
-
-
-class OptionsBox(QGroupBox):
-    def __init__(self, title, option_names, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setTitle(title)
-        self.layout = QVBoxLayout(self)
-
-        self.option_names = option_names
-        self.options = {}
-
-        self.create()
-
-    def create(self):
-        for name in self.option_names:
-            check = QCheckBox(name)
-            check.setCheckState(False)
-            self.layout.addWidget(check)
-            self.options[name] = check        
-
-
 class MagneticMonitor(QDialog):
     """ UI """
     def __init__(self, parent, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         dv_widget = DataView(self)
-        self.data_view = dv_widget.views
+        self.data_view = dv_widget
 
         dv_widget2 = DataView(self)
         self.data_view2 = dv_widget2.views
@@ -391,7 +327,6 @@ class MainWindow(QMainWindow):
 class MagneticApp(MainWindow):
     app_title = "Magnetic Viewer - {0}"
     TIMEOUT = 100
-    TIMEOUT_QUEUE = 0.5
 
     def __init__(self, data=None, title=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -437,17 +372,17 @@ class MagneticApp(MainWindow):
         self.spin.valueChanged[int].connect(self.on_set_chart_xinterval)
 
         # ...models
-        # self.model.rowsInserted.connect(self.on_model_changed)
+        self.model.rowsInserted.connect(self.on_model_changed)
 
     def on_model_changed(self):
-        print('On model changed')
+        self.counter.setText("Rx: {}".format(self.model.rowCount()))
 
     def timerEvent(self, QTimerEvent):
         """ Handler timer event, every 100ms"""
 
         # <1> Get data from sensor
         try:
-            data = [round(item, 1) for item in sensor.SENSOR_QUEUE.get(timeout=self.TIMEOUT_QUEUE)]
+            data = [round(item, 1) for item in sensor.SENSOR_QUEUE.get(timeout=0.5)]
         except queue.Empty:
             self.status.showMessage("No sensor data")
             
@@ -456,7 +391,6 @@ class MagneticApp(MainWindow):
                 self.errors.setText("Err: {}".format(self.errors_data))
             else:
                 self.errors.setText("Err: {}".format(">10000"))
-
             return
 
         pid, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz = data
@@ -464,15 +398,12 @@ class MagneticApp(MainWindow):
         # <2> Append data to model
         self.model.append_data((r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz))
 
-        # Indicator recieve message
-        self.counter.setText("Rx: {}".format(self.model.rowCount()))
+        # <4> Show to data view
+        self.data_view.update(r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)
 
         # <3> Apply correction algorithms
         if self.options['dub z'].checkState():
             hy_raw, hx_raw, hz_raw = to_horizont(hy_raw, hx_raw, hz_raw, r, p)
-
-        # <4> Show to data view
-        self.show_data(r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz)
 
         if self.options['dub soft-iron'].checkState():
             try:
@@ -485,10 +416,11 @@ class MagneticApp(MainWindow):
 
         # <5> Update plot
         if self.options['update charts'].checkState():
-            #self.charts['inclinometer'].update_plot(r, p)
+            self.charts['inclinometer'].update_plot(r, p)
             #self.charts['heading'].update_plot(h)
             #self.charts['magnitometer'].update_plot(hy, hx, hz)
-            self.charts['deviation'].update_plot(hy, hx)
+            #FIXME: При включения графика девиации увеличивается в разы количество пропущенных сигналов
+            #self.charts['deviation'].update_plot(hy, hx)
 
         # <6> Logging data
         if self.logging_enable:
@@ -511,18 +443,6 @@ class MagneticApp(MainWindow):
             str_data += '\n'
             with open(path, 'a') as f:
                 f.write(str_data)
-
-    def show_data(self, r, p, h, hy_raw, hx_raw, hz_raw, hy, hx, hz, fmt_value='{0:.1f}'):
-        """ Show sensor data to data view"""
-        self.data_view['roll'].setText(fmt_value.format(r))
-        self.data_view['pitch'].setText(fmt_value.format(p))
-        self.data_view['heading'].setText(fmt_value.format(h))
-        self.data_view['hyr'].setText(fmt_value.format(hy_raw))
-        self.data_view['hxr'].setText(fmt_value.format(hx_raw))
-        self.data_view['hzr'].setText(fmt_value.format(hz_raw))
-        self.data_view['hy'].setText(fmt_value.format(hy))
-        self.data_view['hx'].setText(fmt_value.format(hx))
-        self.data_view['hz'].setText(fmt_value.format(hz))
 
     def on_run(self, btn):
         name = btn.objectName()
