@@ -7,9 +7,13 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 
 from matplotlib.figure import Figure
 
+import numpy
+
 
 
 class BasePlot(FigureCanvas):
+    xmin = 0
+    xmax = 25
     def __init__(self, parent=None, width=5, height=5, dpi=100,
                  title='', ylabel='', xlabel='', 
                  *args, **kwargs):
@@ -17,25 +21,44 @@ class BasePlot(FigureCanvas):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         self.fig.suptitle(title, fontsize=10)
 
-        self.axes = fig.add_subplot(111)
+        self.axes = self.fig.add_subplot(111)
+        self.axes.set_ylim(0, 25)
         self.axes.set_xlim(self.xmin, self.xmax)
         self.axes.grid()
     
-        super().__init__(fig)
+        super(BasePlot, self).__init__(self.fig)
+
+        print(self.axes.plot([], [], marker='.'))
 
     def add_point(self, x, y):
-        pass
+        scat = self.axes.get_children()[0] 
+        scat.set_xdata(numpy.append(scat.get_xdata(), 16))
+        scat.set_ydata(numpy.append(scat.get_ydata(), 16))
+        self.draw()
+
 
     def remove_point(self, x, y):
-        pass
+        scat = self.axes.get_children()[0] 
+        xdata = scat.get_xdata()
+        ydata = scat.get_ydata()
+
+        points = list(zip(xdata, ydata))
+        index = points.index((16.0, 16.0))
+
+        xdata.pop(index)
+        ydata.pop(index)
+
+        scat.set_xdata(xdata)
+        scat.set_ydata(ydata)
 
     def clear():
         pass
 
-    def enable_cursor(enabled):
+    def enable_cursor(self, enabled):
         if enabled:
             self.cursor = Cursor(self.axes)
-            fig.canvas.mpl_connect('motion_notify_event', self.cursor.on_mouse_move)
+            self.fig.canvas.mpl_connect('motion_notify_event', self.cursor.on_mouse_move)
+            self.cursor = wcursor(self.axes, useblit=True, color='red', linewidth=2 )
 
 
 
@@ -71,7 +94,6 @@ class XYPlot(FigureCanvas):
         self.axes.cla()
         self.init_axes()
         self.draw()
-
 
     def update_plot(self, x, y):
         self.axes.cla()
@@ -271,3 +293,27 @@ class Cursor:
             self.vertical_line.set_xdata(x)
             self.text.set_text('x=%1.2f, y=%1.2f' % (x, y))
             self.ax.figure.canvas.draw()
+
+
+if __name__ == "__main__":
+    import sys
+    from PyQt5 import QtGui, QtWidgets
+
+    bp = BasePlot()
+
+    app = QtWidgets.QApplication(sys.argv)
+    w = QtWidgets.QWidget()
+    layout = QtWidgets.QVBoxLayout(w)
+    layout.addWidget(bp)
+    panel = QtWidgets.QHBoxLayout()
+    btn = QtWidgets.QPushButton('Add Point')
+    btn2 = QtWidgets.QPushButton('Remove Point')
+    panel.addWidget(btn)
+    panel.addWidget(btn2)
+    layout.addLayout(panel)
+
+    btn.clicked.connect(lambda: bp.add_point(1,1)) 
+    btn2.clicked.connect(lambda: bp.remove_point(16,16)) 
+    
+    w.show()
+    app.exec()
