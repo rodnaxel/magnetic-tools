@@ -414,11 +414,10 @@ class MagneticApp(MainWindow):
                 self.options['dub soft-iron'].setCheckState(False)
                 self.status.showMessage("Error! Please, calibrate", 1000)
 
-        # <5> Update plot
-        if self.options['update charts'].checkState():
-            self.charts['inclinometer'].update_plot(r, p)
-            #self.charts['heading'].update_plot(h)
-            #self.charts['magnitometer'].update_plot(hy, hx, hz)
+
+        self.charts['inclinometer'].update_plot(r, p)
+        self.charts['heading'].update_plot(h)
+        self.charts['magnitometer'].update_plot(hy, hx, hz)
             #FIXME: При включения графика девиации увеличивается в разы количество пропущенных сигналов
             #self.charts['deviation'].update_plot(hy, hx)
 
